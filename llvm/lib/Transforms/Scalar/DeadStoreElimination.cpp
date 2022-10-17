@@ -95,6 +95,7 @@ using namespace PatternMatch;
 STATISTIC(NumRemainingStores, "Number of stores remaining after DSE");
 STATISTIC(NumRedundantStores, "Number of redundant stores deleted");
 STATISTIC(NumFastStores, "Number of stores deleted");
+STATISTIC(NumSunkStores, "Number of sunk stores");
 STATISTIC(NumFastOther, "Number of other instrs removed");
 STATISTIC(NumCompletePartials, "Number of stores dead by later partials");
 STATISTIC(NumModifiedStores, "Number of stores modified");
@@ -230,7 +231,18 @@ enum OverwriteResult {
   OW_Unknown
 };
 
-} // end anonymous namespace
+// Represent a dead access candidate that we can delete or sink it.
+struct DeadAccessCandidate {
+  MemoryAccess *MaybeDeadAccess;
+
+  // Only successor that MaybeDeadAccess live in. nullptr if
+  // MaybeDeadAccess is post-dominated by its KillingDefs.
+  BasicBlock *AliveSucc;
+
+  bool hasAliveSucc() { return AliveSucc != nullptr; }
+};
+
+} // end anonymous namespace.
 
 /// Check if two instruction are masked stores that completely
 /// overwrite one another. More specifically, \p KillingI has to
@@ -782,6 +794,10 @@ struct DSEState {
   /// Keep track of instructions (partly) overlapping with killing MemoryDefs per
   /// basic block.
   MapVector<BasicBlock *, InstOverlapIntervalsTy> IOLs;
+
+  /// Keep track of instructions that is only alive in one successor.
+  MapVector<Instruction *, BasicBlock *> SinkCandidates;
+
   // Check if there are root nodes that are terminated by UnreachableInst.
   // Those roots pessimize post-dominance queries. If there are such roots,
   // fall back to CFG scan starting from all non-unreachable roots.
@@ -1228,7 +1244,7 @@ struct DSEState {
   // there is no such MemoryDef, return None. The returned value may not
   // (completely) overwrite \p KillingLoc. Currently we bail out when we
   // encounter an aliasing MemoryUse (read).
-  Optional<MemoryAccess *>
+  Optional<DeadAccessCandidate>
   getDomMemoryDef(MemoryDef *KillingDef, MemoryAccess *StartAccess,
                   const MemoryLocation &KillingLoc, const Value *KillingUndObj,
                   unsigned &ScanLimit, unsigned &WalkerStepLimit,
@@ -1286,7 +1302,7 @@ struct DSEState {
       // caller is responsible for traversing them.
       if (isa<MemoryPhi>(Current)) {
         LLVM_DEBUG(dbgs() << "   ...  found MemoryPhi\n");
-        return Current;
+        return {{Current, nullptr}};
       }
 
       // Below, check if CurrentDef is a valid candidate to be eliminated by
@@ -1546,9 +1562,33 @@ struct DSEState {
       // there is a path from MaybeDeadAccess to an exit not going through a
       // killing block.
       if (!PDT.dominates(CommonPred, MaybeDeadAccess->getBlock())) {
-        if (!AnyUnreachableExit)
-          return None;
+        if (!AnyUnreachableExit) {
+          if (IsMemTerm)
+            return None;
 
+          // It does not make sense to sink if has only one successor.
+          if (succ_size(MaybeDeadAccess->getBlock()) == 1)
+            return None;
+
+          BasicBlock *SuccToSinkTo = nullptr;
+          for (auto *Succ : successors(MaybeDeadAccess->getBlock())) {
+
+            if (all_of(KillingDefs, [Succ](Instruction *KillingDef) {
+                  return KillingDef->getParent() != Succ;
+                })) {
+              if (SuccToSinkTo)
+                return None;
+
+              // If the successor to sink has other predecessors, then sink
+              // to it will cause mis-compilation.
+              if (pred_size(Succ) > 1)
+                return None;
+
+              SuccToSinkTo = Succ;
+            }
+          }
+          return {{MaybeDeadAccess, SuccToSinkTo}};
+        }
         // Fall back to CFG scan starting at all non-unreachable roots if not
         // all paths to the exit go through CommonPred.
         CommonPred = nullptr;
@@ -1556,7 +1596,7 @@ struct DSEState {
 
       // If CommonPred itself is in the set of killing blocks, we're done.
       if (KillingBlocks.count(CommonPred))
-        return {MaybeDeadAccess};
+        return {{MaybeDeadAccess, nullptr}};
 
       SetVector<BasicBlock *> WorkList;
       // If CommonPred is null, there are multiple exits from the function.
@@ -1596,7 +1636,30 @@ struct DSEState {
 
     // No aliasing MemoryUses of MaybeDeadAccess found, MaybeDeadAccess is
     // potentially dead.
-    return {MaybeDeadAccess};
+    return {{MaybeDeadAccess, nullptr}};
+  }
+
+  bool sinkInstructions() {
+    bool MadeChange = false;
+    MemorySSAUpdater Updater(&MSSA);
+    for (auto Candidate : SinkCandidates) {
+      Instruction *ToSink = Candidate.first;
+      BasicBlock *SuccToSinkTo = Candidate.second;
+      MemoryAccess *DeadAccess = MSSA.getMemoryAccess(ToSink);
+      assert(!isa<MemoryPhi>(DeadAccess) && "Can't sink MemoryPhi");
+      MemoryAccess *DeadAccessDefining =
+          cast<MemoryUseOrDef>(DeadAccess)->getDefiningAccess();
+
+      if (auto *Def = dyn_cast<MemoryDef>(DeadAccess))
+        SkipStores.insert(Def);
+      Updater.removeMemoryAccess(DeadAccess);
+      ToSink->moveBefore(SuccToSinkTo->getFirstNonPHI());
+      Updater.createMemoryAccessInBB(ToSink, DeadAccessDefining,
+                                     ToSink->getParent(), MemorySSA::Beginning);
+      ++NumSunkStores;
+      MadeChange = true;
+    }
+    return MadeChange;
   }
 
   // Delete dead memory defs
@@ -1634,6 +1697,11 @@ struct DSEState {
       auto I = IOLs.find(DeadInst->getParent());
       if (I != IOLs.end())
         I->second.erase(DeadInst);
+
+      // Deleting is more beneficial than sinking.
+      if (SinkCandidates.count(DeadInst))
+        SinkCandidates.erase(DeadInst);
+
       // Remove its operands
       for (Use &O : DeadInst->operands())
         if (Instruction *OpI = dyn_cast<Instruction>(O)) {
@@ -2013,16 +2081,16 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       if (State.SkipStores.count(Current))
         continue;
 
-      Optional<MemoryAccess *> MaybeDeadAccess = State.getDomMemoryDef(
+      Optional<DeadAccessCandidate> DeadCandidate = State.getDomMemoryDef(
           KillingDef, Current, KillingLoc, KillingUndObj, ScanLimit,
           WalkerStepLimit, IsMemTerm, PartialLimit);
 
-      if (!MaybeDeadAccess) {
+      if (!DeadCandidate) {
         LLVM_DEBUG(dbgs() << "  finished walk\n");
         continue;
       }
 
-      MemoryAccess *DeadAccess = *MaybeDeadAccess;
+      MemoryAccess *DeadAccess = DeadCandidate->MaybeDeadAccess;
       LLVM_DEBUG(dbgs() << " Checking if we can kill " << *DeadAccess);
       if (isa<MemoryPhi>(DeadAccess)) {
         LLVM_DEBUG(dbgs() << "\n  ... adding incoming values to worklist\n");
@@ -2066,48 +2134,57 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
         int64_t DeadOffset = 0;
         OverwriteResult OR = State.isOverwrite(
             KillingI, DeadI, KillingLoc, DeadLoc, KillingOffset, DeadOffset);
-        if (OR == OW_MaybePartial) {
-          auto Iter = State.IOLs.insert(
-              std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(
-                  DeadI->getParent(), InstOverlapIntervalsTy()));
-          auto &IOL = Iter.first->second;
-          OR = isPartialOverwrite(KillingLoc, DeadLoc, KillingOffset,
-                                  DeadOffset, DeadI, IOL);
-        }
+        if (!DeadCandidate->hasAliveSucc()) {
+          if (OR == OW_MaybePartial) {
+            auto Iter = State.IOLs.insert(
+                std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(
+                    DeadI->getParent(), InstOverlapIntervalsTy()));
+            auto &IOL = Iter.first->second;
+            OR = isPartialOverwrite(KillingLoc, DeadLoc, KillingOffset,
+                                    DeadOffset, DeadI, IOL);
+          }
 
-        if (EnablePartialStoreMerging && OR == OW_PartialEarlierWithFullLater) {
-          auto *DeadSI = dyn_cast<StoreInst>(DeadI);
-          auto *KillingSI = dyn_cast<StoreInst>(KillingI);
-          // We are re-using tryToMergePartialOverlappingStores, which requires
-          // DeadSI to dominate DeadSI.
-          // TODO: implement tryToMergeParialOverlappingStores using MemorySSA.
-          if (DeadSI && KillingSI && DT.dominates(DeadSI, KillingSI)) {
-            if (Constant *Merged = tryToMergePartialOverlappingStores(
-                    KillingSI, DeadSI, KillingOffset, DeadOffset, State.DL,
-                    State.BatchAA, &DT)) {
+          if (EnablePartialStoreMerging &&
+              OR == OW_PartialEarlierWithFullLater) {
+            auto *DeadSI = dyn_cast<StoreInst>(DeadI);
+            auto *KillingSI = dyn_cast<StoreInst>(KillingI);
+            // We are re-using tryToMergePartialOverlappingStores, which
+            // requires DeadSI to dominate DeadSI.
+            // TODO: implement tryToMergeParialOverlappingStores using
+            // MemorySSA.
+            if (DeadSI && KillingSI && DT.dominates(DeadSI, KillingSI)) {
+              if (Constant *Merged = tryToMergePartialOverlappingStores(
+                      KillingSI, DeadSI, KillingOffset, DeadOffset, State.DL,
+                      State.BatchAA, &DT)) {
 
-              // Update stored value of earlier store to merged constant.
-              DeadSI->setOperand(0, Merged);
-              ++NumModifiedStores;
-              MadeChange = true;
+                // Update stored value of earlier store to merged constant.
+                DeadSI->setOperand(0, Merged);
+                ++NumModifiedStores;
+                MadeChange = true;
 
-              Shortend = true;
-              // Remove killing store and remove any outstanding overlap
-              // intervals for the updated store.
-              State.deleteDeadInstruction(KillingSI);
-              auto I = State.IOLs.find(DeadSI->getParent());
-              if (I != State.IOLs.end())
-                I->second.erase(DeadSI);
-              break;
+                Shortend = true;
+                // Remove killing store and remove any outstanding overlap
+                // intervals for the updated store.
+                State.deleteDeadInstruction(KillingSI);
+                auto I = State.IOLs.find(DeadSI->getParent());
+                if (I != State.IOLs.end())
+                  I->second.erase(DeadSI);
+                break;
+              }
             }
           }
-        }
 
-        if (OR == OW_Complete) {
-          LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *DeadI
-                            << "\n  KILLER: " << *KillingI << '\n');
-          State.deleteDeadInstruction(DeadI);
-          ++NumFastStores;
+          if (OR == OW_Complete) {
+            LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *DeadI
+                              << "\n  KILLER: " << *KillingI << '\n');
+            State.deleteDeadInstruction(DeadI);
+            ++NumFastStores;
+            MadeChange = true;
+          }
+        } else if (OR == OW_Complete) {
+          // The MaybeDeadAccess is live in only one successor, in which case,
+          // we can sink the instruction of MaybeDeadAccess to this successor.
+          State.SinkCandidates.insert({DeadI, DeadCandidate->AliveSucc});
           MadeChange = true;
         }
       }
@@ -2139,6 +2216,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
   MadeChange |= State.eliminateRedundantStoresOfExistingValues();
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
+  MadeChange |= State.sinkInstructions();
   return MadeChange;
 }
 } // end anonymous namespace

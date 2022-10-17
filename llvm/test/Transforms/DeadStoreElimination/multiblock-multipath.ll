@@ -109,13 +109,13 @@ bb5:
 ; entry->bb2->bb5.
 define void @accessible_after_return_4(ptr noalias %P, i1 %c1) {
 ; CHECK-LABEL: @accessible_after_return_4(
-; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @use(ptr [[P]])
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    ret void

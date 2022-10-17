@@ -28,9 +28,9 @@ bb3:
 
 define void @test3(ptr noalias %P) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
@@ -148,12 +148,12 @@ bb3:
 
 define void @test10(ptr %P) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
