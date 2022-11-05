@@ -727,6 +727,29 @@ void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
     }
   };
 
+  auto RemoveDeadMemoryAccess = [&](BasicBlock *BB) {
+    BasicBlock *NewBlock = cast_or_null<BasicBlock>(VMap.lookup(BB));
+    if (!NewBlock)
+      return;
+    const MemorySSA::AccessList *BA = MSSA->getBlockAccesses(BB);
+    if (!BA)
+      return;
+    SmallVector<Instruction *, 2> ToRemove;
+    for (const MemoryAccess &MA : *BA) {
+      if (const MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(&MA)) {
+        Instruction *Inst = MUD->getMemoryInst();
+        if (auto *Call = dyn_cast<CallInst>(Inst)) {
+          ModRefInfo ModRef = MSSA->AA->getModRefInfo(Call, None);
+          if (!isModOrRefSet(ModRef))
+            ToRemove.push_back(Inst);
+        }
+      }
+    }
+    for (auto *Inst : ToRemove) {
+      removeMemoryAccess(Inst);
+    }
+  };
+
   auto ProcessBlock = [&](BasicBlock *BB) {
     BasicBlock *NewBlock = cast_or_null<BasicBlock>(VMap.lookup(BB));
     if (!NewBlock)
@@ -743,6 +766,9 @@ void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
     // Update Uses and Defs.
     cloneUsesAndDefs(BB, NewBlock, VMap, MPhiMap);
   };
+
+  for (auto *BB : llvm::concat<BasicBlock *const>(LoopBlocks, ExitBlocks))
+    RemoveDeadMemoryAccess(BB);
 
   for (auto *BB : llvm::concat<BasicBlock *const>(LoopBlocks, ExitBlocks))
     ProcessBlock(BB);
