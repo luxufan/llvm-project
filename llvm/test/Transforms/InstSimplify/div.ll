@@ -182,10 +182,7 @@ define i8 @not_udiv_dividend_known_smaller_than_constant_divisor2(i1 %b) {
 
 define i32 @udiv_dividend_known_smaller_than_divisor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_dividend_known_smaller_than_divisor(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 250
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 251
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[AND]], [[OR]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 0
 ;
   %and = and i32 %x, 250
   %or = or i32 %y, 251

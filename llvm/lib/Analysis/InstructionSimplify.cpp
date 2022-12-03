@@ -3863,6 +3863,44 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     if (Value *V = threadCmpOverPHI(Pred, LHS, RHS, Q, MaxRecurse))
       return V;
 
+  if (isa<IntegerType>(LHS->getType()) && isa<IntegerType>(RHS->getType())) {
+    unsigned int BitWidth = cast<IntegerType>(LHS->getType())->getBitWidth();
+    KnownBits LHSKnown(BitWidth), RHSKnown(BitWidth);
+    computeKnownBits(LHS, LHSKnown, Q.DL);
+    computeKnownBits(RHS, RHSKnown, Q.DL);
+    Optional<bool> KnownVal = None;
+    switch (Pred) {
+      case ICmpInst::ICMP_NE: {
+        KnownVal = KnownBits::ne(LHSKnown, RHSKnown);
+        break;
+      }
+      case ICmpInst::ICMP_EQ:
+        KnownVal = KnownBits::eq(LHSKnown, RHSKnown);
+        break;
+      case ICmpInst::ICMP_SGE:
+        KnownVal = KnownBits::sge(LHSKnown, RHSKnown);
+        break;
+      case ICmpInst::ICMP_UGE:
+        KnownVal = KnownBits::uge(LHSKnown, RHSKnown);
+        break;
+      case ICmpInst::ICMP_SLE:
+        KnownVal = KnownBits::sle(LHSKnown, RHSKnown);
+        break;
+      case ICmpInst::ICMP_SLT:
+        KnownVal = KnownBits::slt(LHSKnown, RHSKnown);
+        break;
+      case ICmpInst::ICMP_UGT:
+        KnownVal = KnownBits::ugt(LHSKnown, RHSKnown);
+        break;
+      case ICmpInst::ICMP_ULT:
+        KnownVal = KnownBits::ult(LHSKnown, RHSKnown);
+        break;
+    }
+    if (KnownVal.has_value())
+      return KnownVal.value() ? ConstantInt::getTrue(ITy->getContext()) : ConstantInt::getFalse(ITy->getContext());
+  }
+
+
   return nullptr;
 }
 
