@@ -420,6 +420,7 @@ public:
 
   bool softPromoteHalfType() const override { return true; }
 
+  MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override;
   /// Return the register type for a given MVT, ensuring vectors are treated
   /// as a series of gpr sized integers.
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,

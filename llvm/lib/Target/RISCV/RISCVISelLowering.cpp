@@ -1176,6 +1176,15 @@ MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
   return Subtarget.getXLenVT();
 }
 
+MVT RISCVTargetLowering::getPointerTy(const DataLayout &DL, uint32_t AS) const {
+  // Return i64 for ILP32. It will be truncated and extended when transferred to
+  // memory, but the 64-bit DAG allow us to use RISCV64's address modes much
+  // more easily.
+  if (Subtarget.is64Bit() && Subtarget.getTargetABI() == RISCVABI::ABI_ILP32)
+    return MVT::getIntegerVT(64);
+  return TargetLowering::getPointerTy(DL, AS);
+}
+
 bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                              const CallInst &I,
                                              MachineFunction &MF,
