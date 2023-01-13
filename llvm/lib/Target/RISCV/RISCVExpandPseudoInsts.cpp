@@ -390,6 +390,15 @@ bool RISCVPreRAExpandPseudo::expandLoadLocalAddress(
                              RISCV::ADDI);
 }
 
+static unsigned getAddrLoadSecondOpcode(const RISCVSubtarget &STI) {
+  if (STI.is64Bit()) {
+    if (STI.getTargetABI() == RISCVABI::ABI_ILP32)
+      return RISCV::LWU;
+    return RISCV::LD;
+  }
+  return RISCV::LW;
+}
+
 bool RISCVPreRAExpandPseudo::expandLoadAddress(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
@@ -401,17 +410,8 @@ bool RISCVPreRAExpandPseudo::expandLoadAddress(
   // is incompatible with existing code models. This also applies to non-pic
   // mode.
   assert(MF->getTarget().isPositionIndependent() || STI.allowTaggedGlobals());
-  unsigned SecondOpcode;
-  if (STI.is64Bit())
-    if (STI.getTargetABI() == RISCVABI::ABI_ILP32)
-      SecondOpcode = RISCV::LWU;
-    else
-      SecondOpcode = RISCV::LD;
-  else
-    SecondOpcode = RISCV::LW;
-
   return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_GOT_HI,
-                             SecondOpcode);
+                             getAddrLoadSecondOpcode(STI));
 }
 
 bool RISCVPreRAExpandPseudo::expandLoadTLSIEAddress(
@@ -420,16 +420,8 @@ bool RISCVPreRAExpandPseudo::expandLoadTLSIEAddress(
   MachineFunction *MF = MBB.getParent();
 
   const auto &STI = MF->getSubtarget<RISCVSubtarget>();
-  unsigned SecondOpcode;
-  if (STI.is64Bit())
-    if (STI.getTargetABI() == RISCVABI::ABI_ILP32)
-      SecondOpcode = RISCV::LWU;
-    else
-      SecondOpcode = RISCV::LD;
-  else
-    SecondOpcode = RISCV::LW;
   return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_TLS_GOT_HI,
-                             SecondOpcode);
+                             getAddrLoadSecondOpcode(STI));
 }
 
 bool RISCVPreRAExpandPseudo::expandLoadTLSGDAddress(
