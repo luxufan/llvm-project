@@ -112,6 +112,12 @@ unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
+unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                             int &FrameIndex) const {
+  unsigned Dummy;
+  return isLoadFromStackSlot(MI, FrameIndex, Dummy);
+}
+
 unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex,
                                             unsigned &MemBytes) const {
@@ -142,6 +148,12 @@ unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   }
 
   return 0;
+}
+
+unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                            int &FrameIndex) const {
+  unsigned Dummy;
+  return isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
 static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
