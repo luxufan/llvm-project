@@ -1314,3 +1314,68 @@ define i32 @main15_logical(i32 %argc) {
   %retval.0 = select i1 %or.cond, i32 2, i32 1
   ret i32 %retval.0
 }
+
+define i1 @xor_of_icmps_of_pow2(i32 %a, i32 %b) {
+; CHECK-LABEL: @xor_of_icmps_of_pow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[B:%.*]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 1
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[TMP4]], 0
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %and_a = and i32 %a, 2
+  %and_a_zero = icmp ne i32 %and_a, 0
+  %and_b = and i32 %b, 8
+  %and_b_zero = icmp ne i32 %and_b, 0
+  %ret = xor i1 %and_a_zero, %and_b_zero
+  ret i1 %ret
+}
+
+define i1 @xor_of_icmps_of_pow2_1(i32 %a, i32 %b) {
+; CHECK-LABEL: @xor_of_icmps_of_pow2_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[B:%.*]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %and_a = and i32 %a, 1
+  %and_a_zero = icmp ne i32 %and_a, 0
+  %and_b = and i32 %b, 8
+  %and_b_zero = icmp ne i32 %and_b, 0
+  %ret = xor i1 %and_a_zero, %and_b_zero
+  ret i1 %ret
+}
+
+define i1 @xor_of_icmps_of_pow2_2(i32 %a, i16 %b) {
+; CHECK-LABEL: @xor_of_icmps_of_pow2_2(
+; CHECK-NEXT:    [[AND_A:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[AND_A_ZERO:%.*]] = icmp ne i32 [[AND_A]], 0
+; CHECK-NEXT:    [[AND_B:%.*]] = and i16 [[B:%.*]], 8
+; CHECK-NEXT:    [[AND_B_ZERO:%.*]] = icmp ne i16 [[AND_B]], 0
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[AND_A_ZERO]], [[AND_B_ZERO]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %and_a = and i32 %a, 1
+  %and_a_zero = icmp ne i32 %and_a, 0
+  %and_b = and i16 %b, 8
+  %and_b_zero = icmp ne i16 %and_b, 0
+  %ret = xor i1 %and_a_zero, %and_b_zero
+  ret i1 %ret
+}
+
+define i1 @xor_of_icmps_of_pow2_same_constant(i32 %a, i32 %b) {
+; CHECK-LABEL: @xor_of_icmps_of_pow2_same_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 8
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %and_a = and i32 %a, 8
+  %and_a_zero = icmp ne i32 %and_a, 0
+  %and_b = and i32 %b, 8
+  %and_b_zero = icmp ne i32 %and_b, 0
+  %ret = xor i1 %and_a_zero, %and_b_zero
+  ret i1 %ret
+}

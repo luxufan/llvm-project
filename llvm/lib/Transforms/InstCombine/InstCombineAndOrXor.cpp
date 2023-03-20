@@ -739,6 +739,53 @@ Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return Builder.CreateICmp(NewPred, Input, RangeEnd);
 }
 
+// Fold (iszero(A & K1) ^ iszero(B & K2))
+//          => iszero(((lshr A, log2(K1)) ^ (lshr B, log2(K2))) & 1)
+Value *InstCombinerImpl::foldXorOfICmpsOfAndWithPow2(ICmpInst *LHS,
+                                                        ICmpInst *RHS,
+                                                        Instruction *CtxI) {
+  if (LHS->getPredicate() != CmpInst::ICMP_NE ||
+      RHS->getPredicate() != CmpInst::ICMP_NE)
+    return nullptr;
+
+  if (!match(LHS->getOperand(1), m_Zero()) ||
+      !match(RHS->getOperand(1), m_Zero()))
+    return nullptr;
+
+  if (LHS->getOperand(0)->getType() != RHS->getOperand(0)->getType())
+    return nullptr;
+
+  Value *L1, *L2, *R1, *R2;
+  if (match(LHS->getOperand(0), m_And(m_Value(L1), m_Value(L2))) &&
+      match(RHS->getOperand(0), m_And(m_Value(R1), m_Value(R2)))) {
+    if (L1 == R1)
+      return nullptr;
+    const APInt *L2Int, *R2Int;
+    if (match(L2, m_Power2(L2Int)) && match(R2, m_Power2(R2Int))) {
+      if (L2Int->eq(*R2Int)) {
+        Value *BitOperation = Builder.CreateXor(L1, R1);
+        Value *AndMask = Builder.CreateAnd(
+            BitOperation,
+            ConstantInt::get(BitOperation->getType(), L2Int->getZExtValue()));
+        return Builder.CreateICmp(
+            CmpInst::ICMP_NE, AndMask,
+            ConstantInt::getNullValue(AndMask->getType()));
+      } else {
+        Value *L1Lshr = Builder.CreateLShr(
+            L1, ConstantInt::get(L1->getType(), L2Int->logBase2()));
+        Value *R1Lshr = Builder.CreateLShr(
+            R1, ConstantInt::get(R1->getType(), R2Int->logBase2()));
+        Value *BitOperation = Builder.CreateXor(L1Lshr, R1Lshr);
+        Value *And = Builder.CreateAnd(
+            BitOperation, ConstantInt::get(BitOperation->getType(), 1));
+        return Builder.CreateICmp(CmpInst::ICMP_NE, And,
+                                  ConstantInt::getNullValue(And->getType()));
+      }
+    }
+  }
+  return nullptr;
+}
+
 // Fold (iszero(A & K1) | iszero(A & K2)) -> (A & (K1 | K2)) != (K1 | K2)
 // Fold (!iszero(A & K1) & !iszero(A & K2)) -> (A & (K1 | K2)) == (K1 | K2)
 Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
@@ -3554,6 +3601,9 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
   Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
+
+  if (Value *V = foldXorOfICmpsOfAndWithPow2(LHS, RHS, &I))
+    return V;
 
   if (predicatesFoldable(PredL, PredR)) {
     if (LHS0 == RHS1 && LHS1 == RHS0) {
