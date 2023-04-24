@@ -475,3 +475,12 @@ define i32 @parity_xor_extra_use2(i32 %arg, i32 %arg1) {
   %i5 = xor i32 %i2, %i4
   ret i32 %i5
 }
+
+define i8 @arg_noundef(i8 noundef %arg) {
+; CHECK-LABEL: @arg_noundef(
+; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[ARG:%.*]]), !range [[RNG0]], !noundef !6
+; CHECK-NEXT:    ret i8 [[CNT]]
+;
+  %cnt = call i8 @llvm.ctpop.i8(i8 %arg)
+  ret i8 %cnt
+}

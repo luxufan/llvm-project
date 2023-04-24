@@ -601,3 +601,20 @@ define <2 x i1> @and_or1_op1not_vec(<2 x i1> %a, <2 x i1> %b) {
   %r = select <2 x i1> %cond, <2 x i1> %a, <2 x i1> %b
   ret <2 x i1> %r
 }
+
+define i1 @poison_metadata(i32 noundef %a, i1 %b) {
+; CHECK-LABEL: @poison_metadata(
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctpop.i32(i32 [[A:%.*]]), !range [[RNG0:![0-9]+]], !noundef !1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], 3
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %c = call i32 @llvm.ctpop.i32(i32 %a), !range !0, !noundef !1
+  %cmp = icmp ugt i32 %c, 2
+  %r = select i1 %b, i1 %cmp, i1 false
+  ret i1 %r
+}
+
+!0 = !{i32 0, i32 4}
+!1 = !{}
+declare i32 @llvm.ctpop.i32(i32)

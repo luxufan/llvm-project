@@ -213,9 +213,10 @@ void Instruction::dropPoisonGeneratingFlags() {
 }
 
 bool Instruction::hasPoisonGeneratingMetadata() const {
-  return hasMetadata(LLVMContext::MD_range) ||
-         hasMetadata(LLVMContext::MD_nonnull) ||
-         hasMetadata(LLVMContext::MD_align);
+  return (hasMetadata(LLVMContext::MD_range) ||
+          hasMetadata(LLVMContext::MD_nonnull) ||
+          hasMetadata(LLVMContext::MD_align)) &&
+         !hasMetadata(LLVMContext::MD_noundef);
 }
 
 void Instruction::dropPoisonGeneratingMetadata() {

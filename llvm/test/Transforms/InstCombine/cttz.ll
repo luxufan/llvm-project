@@ -118,3 +118,25 @@ define <2 x i64> @cttz_sext_zero_def_vec(<2 x i32> %x) {
   %tz = tail call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %s, i1 false)
   ret <2 x i64> %tz
 }
+
+define i32 @cttz_arg_noundef_zero_poison(i16 noundef %x) {
+; CHECK-LABEL: @cttz_arg_noundef_zero_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[TZ:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TZ]]
+;
+  %z = zext i16 %x to i32
+  %tz = call i32 @llvm.cttz.i32(i32 %z, i1 true)
+  ret i32 %tz
+}
+
+define i32 @cttz_arg_noundef(i16 noundef %x) {
+; CHECK-LABEL: @cttz_arg_noundef(
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[Z]], i1 false), !range [[RNG1]], !noundef !3
+; CHECK-NEXT:    ret i32 [[TZ]]
+;
+  %z = zext i16 %x to i32
+  %tz = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %tz
+}

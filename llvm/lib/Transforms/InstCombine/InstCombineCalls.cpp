@@ -505,6 +505,19 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
   return cast<Instruction>(Result);
 }
 
+static bool isGuaranteedDoNotViolateRangeMetadata(Instruction *I,
+                                                  unsigned KnownMin,
+                                                  unsigned KnownMax) {
+  if (MDNode *Node = I->getMetadata(LLVMContext::MD_range))
+    if (mdconst::extract<ConstantInt>(Node->getOperand(0))
+            ->equalsInt(KnownMin) &&
+        mdconst::extract<ConstantInt>(Node->getOperand(1))->equalsInt(KnownMax))
+      if (!canCreateUndefOrPoison(cast<Operator>(I), /*ConsiderFlagsAndMetadata*/ false) && all_of(I->operands(),
+                 [&](Value *V) { return isGuaranteedNotToBeUndefOrPoison(V); }))
+        return true;
+  return false;
+}
+
 static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   assert((II.getIntrinsicID() == Intrinsic::cttz ||
           II.getIntrinsicID() == Intrinsic::ctlz) &&
@@ -602,6 +615,12 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     return &II;
   }
 
+  if (!II.getMetadata(LLVMContext::MD_noundef) &&
+      isGuaranteedDoNotViolateRangeMetadata(&II, DefiniteZeros,
+                                            PossibleZeros + 1))
+    II.setMetadata(LLVMContext::MD_noundef,
+                   MDNode::get(II.getContext(), nullptr));
+
   return nullptr;
 }
 
@@ -682,6 +701,11 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
                    MDNode::get(II.getContext(), LowAndHigh));
     return &II;
   }
+
+  if (!II.getMetadata(LLVMContext::MD_noundef) &&
+      isGuaranteedDoNotViolateRangeMetadata(&II, MinCount, MaxCount + 1))
+    II.setMetadata(LLVMContext::MD_noundef,
+                   MDNode::get(II.getContext(), nullptr));
 
   return nullptr;
 }
