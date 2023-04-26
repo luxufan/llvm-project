@@ -410,8 +410,7 @@ static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
   // returns poison while assume violations are immediate undefined behavior,
   // we can only do this if the value is known non-poison.
   if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
-      LI->getMetadata(LLVMContext::MD_noundef) &&
-      !isKnownNonZero(Val, DL, 0, AC, LI, DT))
+      LI->getMetadata(LLVMContext::MD_noundef))
     addAssumeNonNull(AC, LI);
 }
 
