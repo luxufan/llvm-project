@@ -254,6 +254,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                        MVT::i32, Custom);
+    setOperationAction(ISD::READ_REGISTER, MVT::i32, Custom);
   } else {
     setLibcallName(
         {RTLIB::SHL_I128, RTLIB::SRL_I128, RTLIB::SRA_I128, RTLIB::MUL_I128},
@@ -1183,6 +1184,12 @@ MVT RISCVTargetLowering::getPointerTy(const DataLayout &DL, uint32_t AS) const {
   if (Subtarget.is64Bit() && Subtarget.getTargetABI() == RISCVABI::ABI_ILP32)
     return MVT::getIntegerVT(64);
   return TargetLowering::getPointerTy(DL, AS);
+}
+
+MVT RISCVTargetLowering::getScalarShiftAmountTy(const DataLayout &DL, EVT VT) const {
+  if (Subtarget.is64Bit() && Subtarget.getTargetABI() == RISCVABI::ABI_ILP32)
+    return MVT::getIntegerVT(64);
+  return TargetLowering::getScalarShiftAmountTy(DL, VT);
 }
 
 bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -9233,6 +9240,14 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue EltHi = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, LShr32);
 
     Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, EltLo, EltHi));
+    break;
+  }
+  case ISD::READ_REGISTER: {
+    SDValue Chain = N->getOperand(0);
+    SDValue SysRegName = N->getOperand(1);
+    SDValue Result = DAG.getNode(N->getOpcode(), DL, DAG.getVTList({MVT::i64, MVT::Other}), Chain, SysRegName);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result));
+    Results.push_back(Result.getValue(1));
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
