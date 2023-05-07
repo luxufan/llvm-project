@@ -487,6 +487,8 @@ public:
       return "ZS";
     case InlineAsm::Constraint_ZT:
       return "ZT";
+    case InlineAsm::Constraint_A:
+      return "A";
     default:
       llvm_unreachable("Unknown memory constraint");
     }

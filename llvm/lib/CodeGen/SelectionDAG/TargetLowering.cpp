@@ -5299,11 +5299,11 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         }
       }
       const unsigned OpCode = Op.getOpcode();
-      if (OpCode == ISD::ADD || OpCode == ISD::SUB) {
+      if (OpCode == ISD::ADD || OpCode == ISD::SUB || OpCode == ISD::AND) {
         if ((C = dyn_cast<ConstantSDNode>(Op.getOperand(0))))
           Op = Op.getOperand(1);
         // Subtraction is not commutative.
-        else if (OpCode == ISD::ADD &&
+        else if ((OpCode == ISD::ADD || OpCode == ISD::AND) &&
                  (C = dyn_cast<ConstantSDNode>(Op.getOperand(1))))
           Op = Op.getOperand(0);
         else
