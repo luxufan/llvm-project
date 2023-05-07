@@ -13928,7 +13928,7 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   EVT LocVT = VA.getLocVT();
   EVT ValVT = VA.getValVT();
-  EVT PtrVT = MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0));
+  EVT PtrVT = DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout());
   if (ValVT.isScalableVector()) {
     // When the value is a scalable vector, we save the pointer which points to
     // the scalable vector value in the stack. The ValVT will be the pointer
