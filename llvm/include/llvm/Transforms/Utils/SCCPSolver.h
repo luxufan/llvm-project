@@ -141,6 +141,8 @@ public:
 
   void replaceAndRemoveLatticeValueFor(Value *From, Value *To);
 
+  void removeLatticeValueFor(Value *V);
+
   /// Invalidate the Lattice Value of \p Call and its users after specializing
   /// the call. Then recompute it.
   void resetLatticeValueFor(CallBase *Call);
