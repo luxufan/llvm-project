@@ -730,13 +730,12 @@ public:
 
   void moveLatticeValue(Value *From, Value *To) {
     assert(ValueState.count(From) && "From is not existed in ValueState");
-    ValueState[To] = ValueState[From];
+    assert(!ValueState.count(To) && "To is already existed in ValueState");
+    ValueState.insert(std::make_pair(To, ValueState[From]));
     ValueState.erase(From);
   }
 
-  void removeLatticeValue(Value *V) {
-    ValueState.erase(V);
-  }
+  void removeLatticeValue(Value *V) { ValueState.erase(V); }
 
   /// Invalidate the Lattice Value of \p Call and its users after specializing
   /// the call. Then recompute it.
