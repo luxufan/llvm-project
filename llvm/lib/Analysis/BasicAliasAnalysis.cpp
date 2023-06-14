@@ -529,12 +529,6 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     const Operator *Op = dyn_cast<Operator>(V);
     if (!Op) {
       // The only non-operator case we can handle are GlobalAliases.
-      if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
-        if (!GA->isInterposable()) {
-          V = GA->getAliasee();
-          continue;
-        }
-      }
       Decomposed.Base = V;
       return Decomposed;
     }

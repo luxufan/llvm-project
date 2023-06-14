@@ -211,8 +211,10 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(&Inst)) {
-      if (canRemoveInstruction(&Inst))
+      if (canRemoveInstruction(&Inst)) {
         Inst.eraseFromParent();
+        removeLatticeValue(&Inst);
+      }
 
       MadeChanges = true;
       ++InstRemovedStat;
@@ -730,6 +732,10 @@ public:
     assert(ValueState.count(From) && "From is not existed in ValueState");
     ValueState[To] = ValueState[From];
     ValueState.erase(From);
+  }
+
+  void removeLatticeValue(Value *V) {
+    ValueState.erase(V);
   }
 
   /// Invalidate the Lattice Value of \p Call and its users after specializing
@@ -2034,6 +2040,10 @@ SCCPSolver::getStructLatticeValueFor(Value *V) const {
 
 void SCCPSolver::moveLatticeValue(Value *From, Value *To) {
   return Visitor->moveLatticeValue(From, To);
+}
+
+void SCCPSolver::removeLatticeValue(Value *V) {
+  return Visitor->removeLatticeValue(V);
 }
 
 void SCCPSolver::resetLatticeValueFor(CallBase *Call) {

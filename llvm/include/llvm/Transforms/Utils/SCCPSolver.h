@@ -132,6 +132,8 @@ public:
 
   void moveLatticeValue(Value *From, Value *To);
 
+  void removeLatticeValue(Value *V);
+
   /// Invalidate the Lattice Value of \p Call and its users after specializing
   /// the call. Then recompute it.
   void resetLatticeValueFor(CallBase *Call);
