@@ -369,6 +369,8 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
   /// constants.
   SmallPtrSet<Function *, 16> TrackingIncomingArguments;
 
+  SmallVector<Function *, 16> CalledTrackingIncomingArguments;
+
   /// The reason for two worklists is that overdefined is the lowest state
   /// on the lattice, and moving things to overdefined as fast as possible
   /// makes SCCP converge much faster.
@@ -426,14 +428,14 @@ private:
   bool mergeInValue(ValueLatticeElement &IV, Value *V,
                     ValueLatticeElement MergeWithV,
                     ValueLatticeElement::MergeOptions Opts = {
-                        /*MayIncludeUndef=*/false, /*CheckWiden=*/false});
+                        /*MayIncludeUndef=*/false, /*CheckWiden=*/false}, bool PushToInstList = true);
 
   bool mergeInValue(Value *V, ValueLatticeElement MergeWithV,
                     ValueLatticeElement::MergeOptions Opts = {
-                        /*MayIncludeUndef=*/false, /*CheckWiden=*/false}) {
+                        /*MayIncludeUndef=*/false, /*CheckWiden=*/false}, bool PushToInstList = true) {
     assert(!V->getType()->isStructTy() &&
            "non-structs should use markConstant");
-    return mergeInValue(ValueState[V], V, MergeWithV, Opts);
+    return mergeInValue(ValueState[V], V, MergeWithV, Opts, PushToInstList);
   }
 
   /// getValueState - Return the ValueLatticeElement object that corresponds to
@@ -786,6 +788,10 @@ public:
     return TrackingIncomingArguments;
   }
 
+  SmallVectorImpl<Function *> &getCalledArgumentTrackedFunctions() {
+    return CalledTrackingIncomingArguments;
+  }
+
   void setLatticeValueForSpecializationArguments(Function *F,
                                        const SmallVectorImpl<ArgInfo> &Args);
 
@@ -795,7 +801,25 @@ public:
   }
 
   void solveWhileResolvedUndefsIn(Module &M) {
-    bool ResolvedUndefs = true;
+    bool ResolvedUndefs = false;
+    solve();
+    while (!getCalledArgumentTrackedFunctions().empty()) {
+      Function *CurrF = getCalledArgumentTrackedFunctions().pop_back_val();
+      for (auto I = CurrF->arg_begin(), E = CurrF->arg_end(); I != E; I++) {
+        if (auto *STy = dyn_cast<StructType>(I->getType())) {
+          for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+            ValueLatticeElement CallArg = getStructValueState(I, i);
+            pushToWorkList(CallArg, I);
+          }
+        } else
+          pushToWorkList(getValueState(I), I);
+      }
+      markBlockExecutable(&CurrF->front());
+      solve();
+    }
+    for (Function &F : M)
+      ResolvedUndefs |= resolvedUndefsIn(F);
+
     while (ResolvedUndefs) {
       solve();
       ResolvedUndefs = false;
@@ -968,9 +992,11 @@ void SCCPInstVisitor::visitInstruction(Instruction &I) {
 
 bool SCCPInstVisitor::mergeInValue(ValueLatticeElement &IV, Value *V,
                                    ValueLatticeElement MergeWithV,
-                                   ValueLatticeElement::MergeOptions Opts) {
+                                   ValueLatticeElement::MergeOptions Opts,
+                                   bool PushToInstList) {
   if (IV.mergeIn(MergeWithV, Opts)) {
-    pushToWorkList(IV, V);
+    if (PushToInstList)
+      pushToWorkList(IV, V);
     LLVM_DEBUG(dbgs() << "Merged " << MergeWithV << " into " << *V << " : "
                       << IV << "\n");
     return true;
@@ -1669,7 +1695,7 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
   // entry block executable and merge in the actual arguments to the call into
   // the formal arguments of the function.
   if (TrackingIncomingArguments.count(F)) {
-    markBlockExecutable(&F->front());
+    bool Merged = false;
 
     // Propagate information from this call site into the callee.
     auto CAI = CB.arg_begin();
@@ -1685,12 +1711,22 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
       if (auto *STy = dyn_cast<StructType>(AI->getType())) {
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           ValueLatticeElement CallArg = getStructValueState(*CAI, i);
-          mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg,
-                       getMaxWidenStepsOpts());
+          if (mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg,
+                       getMaxWidenStepsOpts()))
+            if (F != CB.getFunction())
+              Merged = true;
         }
-      } else
-        mergeInValue(&*AI, getValueState(*CAI), getMaxWidenStepsOpts());
+      } else {
+        if (mergeInValue(&*AI, getValueState(*CAI), getMaxWidenStepsOpts(), F == CB.getFunction()))
+          if (F != CB.getFunction()) {
+            Merged = true;
+          }
+      }
     }
+    if (!Merged)
+      markBlockExecutable(&F->front());
+    else if (llvm::find(CalledTrackingIncomingArguments, F) == CalledTrackingIncomingArguments.end())
+      CalledTrackingIncomingArguments.push_back(F);
   }
 }
 
