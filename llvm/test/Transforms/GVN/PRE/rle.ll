@@ -1057,7 +1057,7 @@ define void @load_load_partial_alias_loop(ptr %P) {
 ; LE-NEXT:    [[TMP0:%.*]] = trunc i32 [[V_1_32]] to i8
 ; LE-NEXT:    br label [[LOOP:%.*]]
 ; LE:       loop:
-; LE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[V_I_PRE:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ]
+; LE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ]
 ; LE-NEXT:    [[I:%.*]] = phi i64 [ 1, [[ENTRY]] ], [ [[I_INC:%.*]], [[LOOP_LOOP_CRIT_EDGE]] ]
 ; LE-NEXT:    [[P_I:%.*]] = getelementptr i8, ptr [[P]], i64 [[I]]
 ; LE-NEXT:    call void @use.i8(i8 [[V_I]])
@@ -1065,10 +1065,10 @@ define void @load_load_partial_alias_loop(ptr %P) {
 ; LE-NEXT:    call void @use.i32(i32 [[V_I_32]])
 ; LE-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; LE-NEXT:    [[CMP:%.*]] = icmp ne i64 [[I_INC]], 64
+; LE-NEXT:    [[TMP1:%.*]] = lshr i32 [[V_I_32]], 8
+; LE-NEXT:    [[TMP2]] = trunc i32 [[TMP1]] to i8
 ; LE-NEXT:    br i1 [[CMP]], label [[LOOP_LOOP_CRIT_EDGE]], label [[EXIT:%.*]]
 ; LE:       loop.loop_crit_edge:
-; LE-NEXT:    [[P_I_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P]], i64 [[I_INC]]
-; LE-NEXT:    [[V_I_PRE]] = load i8, ptr [[P_I_PHI_TRANS_INSERT]], align 1
 ; LE-NEXT:    br label [[LOOP]]
 ; LE:       exit:
 ; LE-NEXT:    ret void
@@ -1084,7 +1084,7 @@ define void @load_load_partial_alias_loop(ptr %P) {
 ; BE-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
 ; BE-NEXT:    br label [[LOOP:%.*]]
 ; BE:       loop:
-; BE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP1]], [[ENTRY:%.*]] ], [ [[V_I_PRE:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ]
+; BE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP1]], [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ]
 ; BE-NEXT:    [[I:%.*]] = phi i64 [ 1, [[ENTRY]] ], [ [[I_INC:%.*]], [[LOOP_LOOP_CRIT_EDGE]] ]
 ; BE-NEXT:    [[P_I:%.*]] = getelementptr i8, ptr [[P]], i64 [[I]]
 ; BE-NEXT:    call void @use.i8(i8 [[V_I]])
@@ -1092,10 +1092,10 @@ define void @load_load_partial_alias_loop(ptr %P) {
 ; BE-NEXT:    call void @use.i32(i32 [[V_I_32]])
 ; BE-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; BE-NEXT:    [[CMP:%.*]] = icmp ne i64 [[I_INC]], 64
+; BE-NEXT:    [[TMP2:%.*]] = lshr i32 [[V_I_32]], 16
+; BE-NEXT:    [[TMP3]] = trunc i32 [[TMP2]] to i8
 ; BE-NEXT:    br i1 [[CMP]], label [[LOOP_LOOP_CRIT_EDGE]], label [[EXIT:%.*]]
 ; BE:       loop.loop_crit_edge:
-; BE-NEXT:    [[P_I_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P]], i64 [[I_INC]]
-; BE-NEXT:    [[V_I_PRE]] = load i8, ptr [[P_I_PHI_TRANS_INSERT]], align 1
 ; BE-NEXT:    br label [[LOOP]]
 ; BE:       exit:
 ; BE-NEXT:    ret void
