@@ -65,6 +65,7 @@ MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
 MODULE_PASS("function-import", FunctionImportPass())
 MODULE_PASS("globalopt", GlobalOptPass())
 MODULE_PASS("globalsplit", GlobalSplitPass())
+MODULE_PASS("globalVTC", GlobalVTCPass())
 MODULE_PASS("hipstdpar-interpose-alloc", HipStdParAllocationInterpositionPass())
 MODULE_PASS("hipstdpar-select-accelerator-code",
             HipStdParAcceleratorCodeSelectionPass())
