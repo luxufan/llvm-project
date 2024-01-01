@@ -114,6 +114,7 @@ STATISTIC(NumUniqueRetVal, "Number of unique return value optimizations");
 STATISTIC(NumVirtConstProp1Bit,
           "Number of 1 bit virtual constant propagations");
 STATISTIC(NumVirtConstProp, "Number of virtual constant propagations");
+STATISTIC(NumVirtualCallSite, "Number of virtual call site");
 
 static cl::opt<PassSummaryAction> ClSummaryAction(
     "wholeprogramdevirt-summary-action",
@@ -1982,8 +1983,10 @@ void DevirtModule::scanTypeTestUsers(
     // If we found any, add them to CallSlots.
     if (!Assumes.empty()) {
       Value *Ptr = CI->getArgOperand(0)->stripPointerCasts();
-      for (DevirtCallSite Call : DevirtCalls)
+      for (DevirtCallSite Call : DevirtCalls) {
         CallSlots[{TypeId, Call.Offset}].addCallSite(Ptr, Call.CB, nullptr);
+        NumVirtualCallSite++;
+      }
     }
 
     auto RemoveTypeTestAssumes = [&]() {
