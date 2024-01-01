@@ -10,4 +10,4 @@ struct GlobalVTCPass : PassInfoMixin<GlobalVTCPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 }
-#endif LLVM_TRANSFORMS_IPO_GLOBALVTC_H
+#endif
