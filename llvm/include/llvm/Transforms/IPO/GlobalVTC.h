@@ -5,7 +5,7 @@
 
 namespace llvm {
 struct GlobalVTCPass : PassInfoMixin<GlobalVTCPass> {
-  size_t VTableSize;
+  size_t VTableSize = 0;
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

@@ -42,6 +42,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/IPO/GlobalVTC.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
@@ -333,6 +334,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   } else {
     MPM.addPass(PB.buildLTODefaultPipeline(OL, ExportSummary));
   }
+
+  MPM.addPass(GlobalVTCPass());
 
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
