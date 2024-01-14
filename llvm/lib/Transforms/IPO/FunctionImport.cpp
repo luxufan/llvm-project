@@ -1197,8 +1197,7 @@ void llvm::updateIndirectCalls(ModuleSummaryIndex &Index) {
 void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
     ModuleSummaryIndex &Index,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
-    function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing) {
-  assert(!Index.withGlobalValueDeadStripping());
+    function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing, bool AfterRegularLTO) {
   if (!ComputeDead ||
       // Don't do anything when nothing is live, this is friendly with tests.
       GUIDPreservedSymbols.empty()) {
@@ -1277,8 +1276,10 @@ void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
       }
     }
 
-    for (const auto &S : VI.getSummaryList())
+    for (const auto &S : VI.getSummaryList()) {
       S->setLive(true);
+      Index.MayLive.insert(S.get());
+    }
     ++LiveSymbols;
     Worklist.push_back(VI);
   };
@@ -1305,8 +1306,10 @@ void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
   unsigned DeadSymbols = Index.size() - LiveSymbols;
   LLVM_DEBUG(dbgs() << LiveSymbols << " symbols Live, and " << DeadSymbols
                     << " symbols Dead \n");
-  NumDeadSymbols += DeadSymbols;
-  NumLiveSymbols += LiveSymbols;
+  if (!AfterRegularLTO) {
+    NumDeadSymbols += DeadSymbols;
+    NumLiveSymbols += LiveSymbols;
+  }
 }
 
 // Compute dead symbols and propagate constants in combined index.
@@ -1314,9 +1317,9 @@ void llvm::computeDeadSymbolsWithConstProp(
     ModuleSummaryIndex &Index,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
-    bool ImportEnabled) {
+    bool ImportEnabled, bool AfterRegularLTO) {
   computeDeadSymbolsAndUpdateIndirectCalls(Index, GUIDPreservedSymbols,
-                                           isPrevailing);
+                                           isPrevailing, AfterRegularLTO);
   if (ImportEnabled)
     Index.propagateAttributes(GUIDPreservedSymbols);
 }

@@ -585,6 +585,10 @@ static int getFD(StringRef Filename, std::error_code &EC,
     return STDOUT_FILENO;
   }
 
+  if (Filename.size() > 255) {
+    Filename = Filename.substr(Filename.size() - 254);
+  }
+
   int FD;
   if (Access & sys::fs::FA_Read)
     EC = sys::fs::openFileForReadWrite(Filename, FD, Disp, Flags);

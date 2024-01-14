@@ -55,6 +55,7 @@
 ; SUMMARY-NEXT:         SingleImplName:  vf4.llvm.merged
 ; SUMMARY-NEXT:         ResByArg:
 ; SUMMARY-NEXT: WithGlobalValueDeadStripping: false
+; SUMMARY-NEXT: VTableOffsetAdjust:
 ; SUMMARY-NEXT: ...
 
 ; CHECK: $vf4.llvm.merged = comdat largest

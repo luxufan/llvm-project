@@ -98,7 +98,7 @@ void use_F() {
 
 // C has no key function, so its vtable should have weak_odr linkage
 // and hidden visibility
-// CHECK-DAG: @_ZTV1C = linkonce_odr unnamed_addr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTV1C = linkonce_odr unnamed_addr addrspace(1) constant {{.*}}, comdat, align 8, !virtual_inheritance !{{.*}}{{$}}
 // CHECK-DAG: @_ZTS1C = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 1{{$}}
 // CHECK-DAG: @_ZTI1C = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
 // CHECK-DAG: @_ZTT1C = linkonce_odr unnamed_addr addrspace(1) constant {{.*}}, comdat, align 8{{$}}

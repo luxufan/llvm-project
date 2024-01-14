@@ -182,7 +182,7 @@ class EmitAssemblyHelper {
   ///
   /// \return True if the module summary should be emitted.
   bool shouldEmitRegularLTOSummary() const {
-    return CodeGenOpts.PrepareForLTO && !CodeGenOpts.DisableLLVMPasses &&
+    return CodeGenOpts.PrepareForLTO &&
            TargetTriple.getVendor() != llvm::Triple::Apple;
   }
 

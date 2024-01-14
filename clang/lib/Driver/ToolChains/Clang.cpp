@@ -7467,6 +7467,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // ThinLTO mode.
     bool IsPS4 = getToolChain().getTriple().isPS4();
 
+    if (Args.hasFlag(options::OPT_fsafe_static_cast, options::OPT_fno_safe_static_cast, false))
+      CmdArgs.push_back("-fsafe-static-cast");
+
     // Check if we passed LTO options but they were suppressed because this is a
     // device offloading action, or we passed device offload LTO options which
     // were suppressed because this is not the device offload action.

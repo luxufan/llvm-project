@@ -28,6 +28,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/Analysis/ClassHierarchyAnalysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -94,7 +95,7 @@ extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 // can only take an address of basic block located in the same function.
 static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
                          SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
-                         SmallPtrSet<const User *, 8> &Visited) {
+                         SmallPtrSet<const User *, 8> &Visited, bool PerModule = true) {
   bool HasBlockAddress = false;
   SmallVector<const User *, 32> Worklist;
   if (Visited.insert(CurUser).second)
@@ -116,8 +117,12 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
         // We have a reference to a global value. This should be added to
         // the reference set unless it is a callee. Callees are handled
         // specially by WriteFunction and are added to a separate list.
-        if (!(CB && CB->isCallee(&OI)))
-          RefEdges.insert(Index.getOrInsertValueInfo(GV));
+        if (!(CB && CB->isCallee(&OI))) {
+          if (PerModule)
+            RefEdges.insert(Index.getOrInsertValueInfo(GV));
+          else
+            RefEdges.insert(Index.getOrInsertValueInfo(GlobalValue::getGUID(GV->getName()), GV->getName()));
+        }
         continue;
       }
       if (Visited.insert(Operand).second)
@@ -125,6 +130,13 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
     }
   }
   return HasBlockAddress;
+}
+
+bool llvm::findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
+                        SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
+                        bool IsPerModule) {
+  SmallPtrSet<const User *, 8> Visited;
+  return ::findRefEdges(Index, CurUser, RefEdges, Visited, IsPerModule);
 }
 
 static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
@@ -166,7 +178,7 @@ static void addVCallToSet(
 /// If this intrinsic call requires that we add information to the function
 /// summary, do so via the non-constant reference arguments.
 static void addIntrinsicToSummary(
-    const CallInst *CI,
+    ModuleSummaryIndex &Index, const CallInst *CI,
     SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> &TypeTests,
     SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
         &TypeTestAssumeVCalls,
@@ -199,11 +211,16 @@ static void addIntrinsicToSummary(
       TypeTests.insert(Guid);
 
     SmallVector<DevirtCallSite, 4> DevirtCalls;
+    SmallVector<int64_t, 1> NonCallOffsets;
     SmallVector<CallInst *, 4> Assumes;
-    findDevirtualizableCallsForTypeTest(DevirtCalls, Assumes, CI, DT);
+    findDevirtualizableCallsForTypeTest(DevirtCalls, NonCallOffsets, Assumes,
+                                        CI, DT);
     for (auto &Call : DevirtCalls)
       addVCallToSet(Call, Guid, TypeTestAssumeVCalls,
                     TypeTestAssumeConstVCalls);
+
+    for (auto Offset : NonCallOffsets)
+      Index.addVTableAccess(Index.saveString(TypeId->getString()), Offset);
 
     break;
   }
@@ -390,7 +407,7 @@ static void computeFunctionSummary(
       if (CalledFunction) {
         if (CI && CalledFunction->isIntrinsic()) {
           addIntrinsicToSummary(
-              CI, TypeTests, TypeTestAssumeVCalls, TypeCheckedLoadVCalls,
+              Index, CI, TypeTests, TypeTestAssumeVCalls, TypeCheckedLoadVCalls,
               TypeTestAssumeConstVCalls, TypeCheckedLoadConstVCalls, DT);
           continue;
         }
@@ -775,6 +792,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   if (!VTableFuncs.empty())
     GVarSummary->setVTableFuncs(VTableFuncs);
   Index.addGlobalValueSummary(V, std::move(GVarSummary));
+
 }
 
 static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
@@ -936,12 +954,52 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                            CantBePromoted, IsThinLTO, GetSSICallback);
   }
 
+  Value *DynCastFn = M.getNamedValue("__dynamic_cast");
+  if (DynCastFn) {
+    for (auto *U : DynCastFn->users()) {
+      auto *CB = dyn_cast<CallBase>(U);
+      Value *DstTypeInfo = CB->getArgOperand(2);
+      Value *SrcTypeInfo = CB->getArgOperand(1);
+      ConstantInt *Hint = cast<ConstantInt>(CB->getArgOperand(3));
+      std::string DstTypeId =
+          CXXABIManager<Itanium>::GetTypeIdFromTypeInfo(DstTypeInfo->getName());
+      std::string SrcTypeId =
+          CXXABIManager<Itanium>::GetTypeIdFromTypeInfo(SrcTypeInfo->getName());
+      Index.addDynCastDst(Index.saveString(DstTypeId));
+      Index.addDynCastSrc(Index.saveString(SrcTypeId));
+      if (!Hint->isZero()) {
+        Index.addVTableAccess(
+            Index.saveString(SrcTypeId),
+            -static_cast<int64_t>(M.getDataLayout().getPointerSize()));
+        Index.addVTableAccess(
+            Index.saveString(SrcTypeId),
+            -2 * static_cast<int64_t>(M.getDataLayout().getPointerSize()));
+      }
+    }
+  }
+
   // Compute summaries for all variables defined in module, and save in the
   // index.
   SmallVector<MDNode *, 2> Types;
   for (const GlobalVariable &G : M.globals()) {
+    StringRef TypeInfoPrefix = CXXABIManager<Itanium>::GetTypeInfoPrefix();
+    if (G.hasName() && G.getName().starts_with(TypeInfoPrefix)) {
+      for (auto *U : G.users()) {
+        if (isa<class Constant>(U))
+          continue;
+
+        if (auto *CB = dyn_cast<CallBase>(U)) {
+          if (CB->getCalledFunction() && CB->getCalledFunction()->hasName() && CB->getCalledFunction()->getName() == "__dynamic_cast")
+            continue;
+        }
+        Index.addRttiUsedByNonDyncast(G.getName());
+        break;
+      }
+    }
+
     if (G.isDeclaration())
       continue;
+
     computeVariableSummary(Index, G, CantBePromoted, M, Types);
   }
 

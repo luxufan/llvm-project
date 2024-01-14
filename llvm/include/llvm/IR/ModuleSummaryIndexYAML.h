@@ -152,6 +152,53 @@ struct FunctionSummaryYaml {
 namespace llvm {
 namespace yaml {
 
+template <> struct CustomMappingTraits<std::map<uint64_t, uint64_t>> {
+  static void inputOne(IO &io, StringRef Key, std::map<uint64_t, uint64_t> &M) {
+    uint64_t Offset;
+    if (Key.getAsInteger(0, Offset)) {
+      io.setError("Key is not an integer");
+      return;
+    }
+
+    io.mapRequired(Key.str().c_str(), M[Offset]);
+
+  }
+  static void output(IO &io, std::map<uint64_t, uint64_t> &M) {
+    for (auto &P : M) {
+      std::string Key = llvm::utostr(P.first);
+      io.mapRequired(Key.c_str(), P.second);
+    }
+  }
+};
+
+template <> struct CustomMappingTraits<std::map<GlobalValue::GUID,
+                                 std::map<uint64_t, uint64_t>>> {
+  static void inputOne(IO &io, StringRef Key, std::map<GlobalValue::GUID,
+                       std::map<uint64_t, uint64_t>> &M) {
+    uint64_t GUID;
+    if (Key.getAsInteger(0, GUID)) {
+      io.setError("Key is not an integer");
+      return;
+    }
+    io.mapRequired(Key.str().c_str(), M[GUID]);
+
+    // TODO
+  }
+  static void output(IO &io, std::map<GlobalValue::GUID,
+                      std::map<uint64_t, uint64_t>> &M) {
+    for (auto &P : M) {
+      std::string Key = llvm::utostr(P.first);
+      io.mapRequired(Key.c_str(), P.second);
+    }
+  }
+};
+
+}
+}
+
+namespace llvm {
+namespace yaml {
+
 template <> struct MappingTraits<FunctionSummary::VFuncId> {
   static void mapping(IO &io, FunctionSummary::VFuncId& id) {
     io.mapOptional("GUID", id.GUID);
@@ -299,6 +346,8 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
       index.CfiFunctionDecls = {CfiFunctionDecls.begin(),
                                 CfiFunctionDecls.end()};
     }
+
+    io.mapOptional("VTableOffsetAdjust", index.OffsetAdjusts);
   }
 };
 

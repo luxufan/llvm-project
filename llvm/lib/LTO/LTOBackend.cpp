@@ -119,6 +119,9 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
       } else
         PathPrefix = M.getModuleIdentifier() + ".";
       std::string Path = PathPrefix + PathSuffix + ".bc";
+      if (Path.size() > 255) {
+        Path = PathPrefix.substr(0, PathPrefix.size() - (Path.size() - 255)) + PathSuffix + ".bc";
+      }
       std::error_code EC;
       raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
       // Because -save-temps is a debugging feature, we report the error

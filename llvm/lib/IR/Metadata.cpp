@@ -34,7 +34,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalObject.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1703,7 +1703,7 @@ bool Instruction::extractProfTotalWeight(uint64_t &TotalVal) const {
   return ::extractProfTotalWeight(*this, TotalVal);
 }
 
-void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
+void GlobalValue::copyMetadata(const GlobalValue *Other, unsigned Offset) {
   SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
   Other->getAllMetadata(MDs);
   for (auto &MD : MDs) {
@@ -1744,7 +1744,7 @@ void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
   }
 }
 
-void GlobalObject::addTypeMetadata(unsigned Offset, Metadata *TypeID) {
+void GlobalValue::addTypeMetadata(unsigned Offset, Metadata *TypeID) {
   addMetadata(
       LLVMContext::MD_type,
       *MDTuple::get(getContext(),
@@ -1753,7 +1753,7 @@ void GlobalObject::addTypeMetadata(unsigned Offset, Metadata *TypeID) {
                      TypeID}));
 }
 
-void GlobalObject::setVCallVisibilityMetadata(VCallVisibility Visibility) {
+void GlobalValue::setVCallVisibilityMetadata(VCallVisibility Visibility) {
   // Remove any existing vcall visibility metadata first in case we are
   // updating.
   eraseMetadata(LLVMContext::MD_vcall_visibility);
@@ -1763,7 +1763,7 @@ void GlobalObject::setVCallVisibilityMetadata(VCallVisibility Visibility) {
                                Type::getInt64Ty(getContext()), Visibility))}));
 }
 
-GlobalObject::VCallVisibility GlobalObject::getVCallVisibility() const {
+GlobalValue::VCallVisibility GlobalValue::getVCallVisibility() const {
   if (MDNode *MD = getMetadata(LLVMContext::MD_vcall_visibility)) {
     uint64_t Val = cast<ConstantInt>(
                        cast<ConstantAsMetadata>(MD->getOperand(0))->getValue())

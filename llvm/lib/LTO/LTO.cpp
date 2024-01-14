@@ -387,6 +387,7 @@ static void thinLTOResolvePrevailingGUID(
         // check all copies.
         S->setCanAutoHide(VI.canAutoHide() &&
                           !GUIDPreservedSymbols.count(VI.getGUID()));
+
       }
       if (C.VisibilityScheme == Config::FromPrevailing)
         Visibility = S->getVisibility();
@@ -739,6 +740,8 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
     LTOMode = LTOK_UnifiedThin;
 
   bool IsThinLTO = LTOInfo->IsThinLTO && (LTOMode != LTOK_UnifiedRegular);
+  if (IsThinLTO)
+    ThinLTO.CombinedIndex.Thin = IsThinLTO;
 
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, {ResI, ResE},
@@ -1150,14 +1153,15 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
       return PrevailingType::Unknown;
     return It->second;
   };
-  computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
-                                  isPrevailing, Conf.OptLevel > 0);
 
   // Setup output file to emit statistics.
   auto StatsFileOrErr = setupStatsFile(Conf.StatsFile);
   if (!StatsFileOrErr)
     return StatsFileOrErr.takeError();
   std::unique_ptr<ToolOutputFile> StatsFile = std::move(StatsFileOrErr.get());
+
+  computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
+                                  isPrevailing, Conf.OptLevel > 0);
 
   // TODO: Ideally this would be controlled automatically by detecting that we
   // are linking with an allocator that supports these interfaces, rather than
@@ -1168,8 +1172,15 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     ThinLTO.CombinedIndex.setWithSupportsHotColdNew();
 
   Error Result = runRegularLTO(AddStream);
-  if (!Result)
+
+  if (!Result) {
+    for (auto GVS : ThinLTO.CombinedIndex.MayLive)
+      GVS->setLive(false);
+
+    computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
+                                  isPrevailing, Conf.OptLevel > 0, true);
     Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols);
+  }
 
   if (StatsFile)
     PrintStatisticsJSON(StatsFile->os());

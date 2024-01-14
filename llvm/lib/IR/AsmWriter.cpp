@@ -2984,6 +2984,61 @@ void AssemblyWriter::printModuleSummaryIndex() {
     Out << ") ; guid = " << GUID << "\n";
   }
 
+  if (!TheIndex->vtableAccesses().empty()) {
+    Out << "^" << NumSlots << " = vtableaccesses: (";
+
+    FieldSeparator FS;
+    for (auto &Iter : TheIndex->vtableAccesses()) {
+      for (auto Offset : Iter.second) {
+        Out << FS;
+        Out << "("
+            << "name: \"" << Iter.first() << "\", offset: " << Offset << ")";
+      }
+    }
+
+    Out << ")\n";
+    NumSlots++;
+  }
+
+  if (!TheIndex->rttisUsedByNonDyncast().empty()) {
+    Out << "^" << NumSlots << " = rttisusedbynondyncast: (";
+
+    FieldSeparator FS;
+    for (auto &Iter : TheIndex->rttisUsedByNonDyncast()) {
+      Out << FS;
+      Out << "name: \"" << Iter << "\"";
+    }
+
+    Out << ")\n";
+  }
+  NumSlots++;
+
+  if (!TheIndex->dynCastDstMap().empty()) {
+    Out << "^" << NumSlots << " = dyncastdst: (";
+    FieldSeparator FS;
+    for (auto &TypeId : TheIndex->dynCastDstMap()) {
+      Out << FS;
+      Out << "("
+          << "name: \"" << TypeId.first() << "\""
+          << ", count: " << TypeId.second << ")";
+    }
+    Out << ")\n";
+    NumSlots++;
+  }
+
+  if (!TheIndex->dynCastSrcMap().empty()) {
+    Out << "^" << NumSlots << " = dyncastsrc: (";
+    FieldSeparator FS;
+    for (auto &TypeId : TheIndex->dynCastSrcMap()) {
+      Out << FS;
+      Out << "("
+          << "name: \"" << TypeId.first() << "\""
+          << ", count: " << TypeId.second << ")";
+    }
+    Out << ")\n";
+    NumSlots++;
+  }
+
   // Don't emit flags when it's not really needed (value is zero by default).
   if (TheIndex->getFlags()) {
     Out << "^" << NumSlots << " = flags: " << TheIndex->getFlags() << "\n";

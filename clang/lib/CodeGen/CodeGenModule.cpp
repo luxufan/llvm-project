@@ -7326,22 +7326,17 @@ CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
   if (InternalId)
     return InternalId;
 
-  if (isExternallyVisible(T->getLinkage())) {
-    std::string OutName;
-    llvm::raw_string_ostream Out(OutName);
-    getCXXABI().getMangleContext().mangleCanonicalTypeName(
-        T, Out, getCodeGenOpts().SanitizeCfiICallNormalizeIntegers);
+  std::string OutName;
+  llvm::raw_string_ostream Out(OutName);
+  getCXXABI().getMangleContext().mangleCanonicalTypeName(
+      T, Out, getCodeGenOpts().SanitizeCfiICallNormalizeIntegers);
 
-    if (getCodeGenOpts().SanitizeCfiICallNormalizeIntegers)
-      Out << ".normalized";
+  if (getCodeGenOpts().SanitizeCfiICallNormalizeIntegers)
+    Out << ".normalized";
 
-    Out << Suffix;
+  Out << Suffix;
 
-    InternalId = llvm::MDString::get(getLLVMContext(), Out.str());
-  } else {
-    InternalId = llvm::MDNode::getDistinct(getLLVMContext(),
-                                           llvm::ArrayRef<llvm::Metadata *>());
-  }
+  InternalId = llvm::MDString::get(getLLVMContext(), Out.str());
 
   return InternalId;
 }

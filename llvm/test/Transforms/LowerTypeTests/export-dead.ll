@@ -11,4 +11,5 @@
 
 ; SUMMARY:      TypeIdMap:
 ; SUMMARY-NEXT: WithGlobalValueDeadStripping: true
+; SUMMARY-NEXT: VTableOffsetAdjust:
 ; SUMMARY-NEXT: ...

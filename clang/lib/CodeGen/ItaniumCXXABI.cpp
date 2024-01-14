@@ -1238,6 +1238,8 @@ void ItaniumCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
         cast<CXXRecordDecl>(ElementType->castAs<RecordType>()->getDecl());
     llvm::Value *VTable = CGF.GetVTablePtr(Ptr, CGF.UnqualPtrTy, ClassDecl);
 
+    CGF.EmitTypeMetadataCodeForVCall(ClassDecl, VTable, SourceLocation());
+
     // Track back to entry -2 and pull out the offset there.
     llvm::Value *OffsetPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
         CGF.IntPtrTy, VTable, -2, "complete-offset.ptr");
@@ -1443,6 +1445,8 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
   llvm::Value *Value = CGF.GetVTablePtr(ThisPtr, CGM.GlobalsInt8PtrTy,
                                         ClassDecl);
 
+  CGF.EmitTypeMetadataCodeForVCall(ClassDecl, Value, SourceLocation());
+
   if (CGM.getItaniumVTableContext().isRelativeLayout()) {
     // Load the type info.
     Value = CGF.Builder.CreateCall(
@@ -1602,6 +1606,8 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastToVoid(CodeGenFunction &CGF,
     // Get the vtable pointer.
     llvm::Value *VTable =
         CGF.GetVTablePtr(ThisAddr, CGF.UnqualPtrTy, ClassDecl);
+
+    CGF.EmitTypeMetadataCodeForVCall(ClassDecl, VTable, SourceLocation());
 
     // Get the offset-to-top from the vtable.
     OffsetToTop =
@@ -1849,6 +1855,14 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
       assert(CGM.getCodeGenOpts().WholeProgramVTables);
       CGM.addCompilerUsedGlobal(VTable);
     }
+
+    if (RD->getNumVBases() > 0)
+      VTable->addMetadata(llvm::LLVMContext::MD_virtual_inherit, *llvm::MDNode::get(
+    VTable->getContext(), std::nullopt));
+
+    if (RD->isEffectivelyFinal())
+      VTable->addMetadata(llvm::LLVMContext::MD_final, *llvm::MDNode::get(
+    VTable->getContext(), std::nullopt));
   }
 
   if (VTContext.isRelativeLayout()) {
@@ -1978,7 +1992,6 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   VTable = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, VTableType, llvm::GlobalValue::ExternalLinkage,
       getContext().toCharUnitsFromBits(PAlign).getAsAlign());
-  VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   // In MS C++ if you have a class with virtual functions in which you are using
   // selective member import/export, then all virtual functions must be exported
@@ -3941,6 +3954,59 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
         GVDLLStorageClass = llvm::GlobalVariable::DLLExportStorageClass;
       }
     }
+  }
+
+  if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
+    const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RecordTy->getDecl());
+    if (RD && RD->getDefinition()) {
+      if (RD->isEffectivelyFinal())
+        GV->addMetadata(llvm::LLVMContext::MD_final, *llvm::MDNode::get(
+      GV->getContext(), std::nullopt));
+
+      if (RD->getNumVBases() > 0)
+        GV->addMetadata(llvm::LLVMContext::MD_virtual_inherit, *llvm::MDNode::get(
+      GV->getContext(), std::nullopt));
+
+      if (RD->getNumBases() > 1)
+        GV->addMetadata(llvm::LLVMContext::MD_multiinhert, *llvm::MDNode::get(
+      GV->getContext(), std::nullopt));
+
+      bool AllPublic = true;
+      bool IsPrivate = false;
+      unsigned NumDynamic = 0;
+      bool IsMultiDynamic = false;
+      for (const auto &Base : RD->bases()) {
+        AccessSpecifier AS = Base.getAccessSpecifier();
+        if (AS != AS_public)
+          AllPublic = false;
+
+        if (AS == AS_private)
+          IsPrivate = true;
+
+        if (auto *RecordTy = dyn_cast<RecordType>(Base.getType()))
+          if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RecordTy->getDecl())) {
+            if (RD->getDefinition()) {
+              if (RD->isDynamicClass())
+                NumDynamic++;
+            }
+          }
+      }
+
+      if (NumDynamic > 1)
+        GV->addMetadata(llvm::LLVMContext::MD_multidynamic, *llvm::MDNode::get(
+      GV->getContext(), std::nullopt));
+
+
+      if (RD->getNumBases() > 0 && AllPublic)
+        GV->addMetadata(llvm::LLVMContext::MD_public, *llvm::MDNode::get(
+      GV->getContext(), std::nullopt));
+
+      if (RD->getNumBases() > 0 && IsPrivate)
+        GV->addMetadata(llvm::LLVMContext::MD_private, *llvm::MDNode::get(
+      GV->getContext(), std::nullopt));
+    }
+
+
   }
 
   // If there's already an old global variable, replace it with the new one.

@@ -328,6 +328,31 @@ bool LLParser::validateEndOfIndex() {
 // Top-Level Entities
 //===----------------------------------------------------------------------===//
 
+bool LLParser::parseRttiUsedByNonDyncast(unsigned ID) {
+  assert(Lex.getKind() == lltok::kw_rttisusedbynondyncast);
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  do {
+    if (Lex.getKind() == lltok::comma)
+      Lex.Lex();
+    std::string Name;
+    if (parseToken(lltok::kw_name, "expected 'name' here") ||
+        parseToken(lltok::colon, "expected ':' here") ||
+        parseStringConstant(Name))
+      return true;
+    Index->addRttiUsedByNonDyncast(Index->saveString(Name));
+  } while (Lex.getKind() == lltok::comma);
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  return false;
+}
+
 bool LLParser::parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback) {
   // Delay parsing of the data layout string until the target triple is known.
   // Then, pass both the the target triple and the tentative data layout string
@@ -943,6 +968,18 @@ bool LLParser::parseSummaryEntry() {
     break;
   case lltok::kw_typeidCompatibleVTable:
     result = parseTypeIdCompatibleVtableEntry(SummaryID);
+    break;
+  case lltok::kw_dyncastdst:
+    result = parseDyncastDsts(SummaryID);
+    break;
+  case lltok::kw_dyncastsrc:
+    result = parseDyncastSrcs(SummaryID);
+    break;
+  case lltok::kw_rttisusedbynondyncast:
+    result = parseRttiUsedByNonDyncast(SummaryID);
+    break;
+  case lltok::kw_vtableaccesses:
+    result = parseVTableAccesses(SummaryID);
     break;
   case lltok::kw_flags:
     result = parseSummaryIndexFlags();
@@ -2868,6 +2905,16 @@ bool LLParser::parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
     return error(Lex.getLoc(), "expected ')'");
 
   B.addTypeAttr(AttrKind, Ty);
+  return false;
+}
+
+bool LLParser::parseAPSInt(unsigned BitWidth, APInt &Val) {
+  if (Lex.getKind() != lltok::APSInt)
+    return tokError("expected integer");
+  if (Lex.getAPSIntVal().getBitWidth() > BitWidth)
+    return tokError("integer is too large for the bit width of specified type");
+  Val = Lex.getAPSIntVal().extend(BitWidth);
+  Lex.Lex();
   return false;
 }
 
@@ -8280,6 +8327,103 @@ bool LLParser::parseTypeIdSummary(TypeIdSummary &TIS) {
 static ValueInfo EmptyVI =
     ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
 
+bool LLParser::parseDyncastDsts(unsigned ID) {
+  assert(Lex.getKind() == lltok::kw_dyncastdst);
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  do {
+    if (Lex.getKind() == lltok::comma)
+      Lex.Lex();
+    std::string Name;
+    uint64_t Count;
+    if (parseToken(lltok::lparen, "expected '(' here") ||
+        parseToken(lltok::kw_name, "expected 'name' here") ||
+        parseToken(lltok::colon, "expected ':' here") ||
+        parseStringConstant(Name) ||
+        parseToken(lltok::comma, "expected ',' here") ||
+        parseToken(lltok::kw_count, "expected 'count' here") ||
+        parseToken(lltok::colon, "expected ':' here") || parseUInt64(Count) ||
+        parseToken(lltok::rparen, "expected ')' here"))
+      return true;
+
+    Index->addDynCastDst(Index->saveString(Name), Count);
+  } while (Lex.getKind() == lltok::comma);
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  return false;
+}
+
+bool LLParser::parseDyncastSrcs(unsigned ID) {
+  assert(Lex.getKind() == lltok::kw_dyncastsrc);
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  do {
+    if (Lex.getKind() == lltok::comma)
+      Lex.Lex();
+    std::string Name;
+    uint64_t Count;
+    if (parseToken(lltok::lparen, "expected '(' here") ||
+        parseToken(lltok::kw_name, "expected 'name' here") ||
+        parseToken(lltok::colon, "expected ':' here") ||
+        parseStringConstant(Name) ||
+        parseToken(lltok::comma, "expected ',' here") ||
+        parseToken(lltok::kw_count, "expected 'count' here") ||
+        parseToken(lltok::colon, "expected ':' here") || parseUInt64(Count) ||
+        parseToken(lltok::rparen, "expected ')' here"))
+      return true;
+
+    Index->addDynCastSrc(Index->saveString(Name), Count);
+  } while (Lex.getKind() == lltok::comma);
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  return false;
+}
+
+bool LLParser::parseVTableAccesses(unsigned ID) {
+  assert(Lex.getKind() == lltok::kw_vtableaccesses);
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  do {
+    if (Lex.getKind() == lltok::comma)
+      Lex.Lex();
+    std::string Name;
+    APInt Offset;
+    if (parseToken(lltok::lparen, "expected '(' here") ||
+        parseToken(lltok::kw_name, "expected 'name' here") ||
+        parseToken(lltok::colon, "expected ':' here") ||
+        parseStringConstant(Name) ||
+        parseToken(lltok::comma, "expected ',' here") ||
+        parseToken(lltok::kw_offset, "expected 'count' here") ||
+        parseToken(lltok::colon, "expected ':' here") ||
+        parseAPSInt(64, Offset) ||
+        parseToken(lltok::rparen, "expected ')' here"))
+      return true;
+
+    Index->addVTableAccess(Index->saveString(Name), Offset.getSExtValue());
+  } while (Lex.getKind() == lltok::comma);
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  return false;
+}
+
 /// TypeIdCompatibleVtableEntry
 ///   ::= 'typeidCompatibleVTable' ':' '(' 'name' ':' STRINGCONSTANT ','
 ///   TypeIdCompatibleVtableInfo
@@ -8297,7 +8441,7 @@ bool LLParser::parseTypeIdCompatibleVtableEntry(unsigned ID) {
     return true;
 
   TypeIdCompatibleVtableInfo &TI =
-      Index->getOrInsertTypeIdCompatibleVtableSummary(Name);
+      Index->getOrInsertTypeIdCompatibleVtableSummary(Index->saveString(Name));
   if (parseToken(lltok::comma, "expected ',' here") ||
       parseToken(lltok::kw_summary, "expected 'summary' here") ||
       parseToken(lltok::colon, "expected ':' here") ||
@@ -9304,19 +9448,12 @@ bool LLParser::parseParamNo(uint64_t &ParamNo) {
 bool LLParser::parseParamAccessOffset(ConstantRange &Range) {
   APSInt Lower;
   APSInt Upper;
-  auto ParseAPSInt = [&](APSInt &Val) {
-    if (Lex.getKind() != lltok::APSInt)
-      return tokError("expected integer");
-    Val = Lex.getAPSIntVal();
-    Val = Val.extOrTrunc(FunctionSummary::ParamAccess::RangeWidth);
-    Val.setIsSigned(true);
-    Lex.Lex();
-    return false;
-  };
   if (parseToken(lltok::kw_offset, "expected 'offset' here") ||
       parseToken(lltok::colon, "expected ':' here") ||
-      parseToken(lltok::lsquare, "expected '[' here") || ParseAPSInt(Lower) ||
-      parseToken(lltok::comma, "expected ',' here") || ParseAPSInt(Upper) ||
+      parseToken(lltok::lsquare, "expected '[' here") ||
+      parseAPSInt(FunctionSummary::ParamAccess::RangeWidth, Lower) ||
+      parseToken(lltok::comma, "expected ',' here") ||
+      parseAPSInt(FunctionSummary::ParamAccess::RangeWidth, Upper) ||
       parseToken(lltok::rsquare, "expected ']' here"))
     return true;
 

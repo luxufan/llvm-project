@@ -3962,7 +3962,7 @@ static void writeTypeIdSummaryRecord(SmallVector<uint64_t, 64> &NameVals,
 
 static void writeTypeIdCompatibleVtableSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, StringTableBuilder &StrtabBuilder,
-    const std::string &Id, const TypeIdCompatibleVtableInfo &Summary,
+    const StringRef Id, const TypeIdCompatibleVtableInfo &Summary,
     ValueEnumerator &VE) {
   NameVals.push_back(StrtabBuilder.add(Id));
   NameVals.push_back(Id.size());
@@ -4254,6 +4254,30 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
+  Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_VTABLE_ACCESSES));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+  unsigned VTableAccessAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_RTTIS_USED_BY_NON_DYNCAST));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+  unsigned RttisUsedByNonDyncastAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_DYNCAST_DST));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+  unsigned DynCastDstAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+  Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_DYNCAST_SRC));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+  unsigned DynCastSrcAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
   SmallVector<uint64_t, 64> NameVals;
   // Iterate over the list of functions instead of the Index to
   // ensure the ordering is stable.
@@ -4306,6 +4330,54 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
                       TypeIdCompatibleVtableAbbrev);
     NameVals.clear();
   }
+
+  for (auto &Iter : Index->vtableAccesses()) {
+    StringRef TypeId = Iter.first();
+    for (auto Offset : Iter.second) {
+      NameVals.push_back(StrtabBuilder.add(TypeId));
+      NameVals.push_back(TypeId.size());
+      NameVals.push_back(Offset);
+    }
+  }
+  if (!Index->vtableAccesses().empty())
+    Stream.EmitRecord(bitc::FS_VTABLE_ACCESSES, NameVals, VTableAccessAbbrev);
+
+  NameVals.clear();
+
+  for (auto &Iter : Index->rttisUsedByNonDyncast()) {
+    NameVals.push_back(StrtabBuilder.add(Iter));
+    NameVals.push_back(Iter.size());
+  }
+  if (!Index->rttisUsedByNonDyncast().empty())
+    Stream.EmitRecord(bitc::FS_RTTIS_USED_BY_NON_DYNCAST, NameVals, RttisUsedByNonDyncastAbbrev);
+
+  NameVals.clear();
+
+  for (auto &Dst : Index->dynCastDstMap()) {
+    StringRef TypeId = Dst.first();
+    uint64_t Count = Dst.second;
+    NameVals.push_back(StrtabBuilder.add(TypeId));
+    NameVals.push_back(TypeId.size());
+    NameVals.push_back(Count);
+  }
+
+  if (!Index->dynCastDstMap().empty())
+    Stream.EmitRecord(bitc::FS_DYNCAST_DST, NameVals, DynCastDstAbbrev);
+
+  NameVals.clear();
+
+  for (auto &Dst : Index->dynCastSrcMap()) {
+    StringRef TypeId = Dst.first();
+    uint64_t Count = Dst.second;
+    NameVals.push_back(StrtabBuilder.add(TypeId));
+    NameVals.push_back(TypeId.size());
+    NameVals.push_back(Count);
+  }
+
+  if (!Index->dynCastSrcMap().empty())
+    Stream.EmitRecord(bitc::FS_DYNCAST_SRC, NameVals, DynCastSrcAbbrev);
+
+  NameVals.clear();
 
   if (Index->getBlockCount())
     Stream.EmitRecord(bitc::FS_BLOCK_COUNT,

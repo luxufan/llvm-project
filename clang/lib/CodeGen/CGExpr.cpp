@@ -4917,6 +4917,44 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
     auto *DerivedClassDecl = cast<CXXRecordDecl>(DerivedClassTy->getDecl());
 
     LValue LV = EmitLValue(E->getSubExpr());
+    const auto *BaseClassTy = E->getSubExpr()->getType()->castAs<RecordType>();
+
+    if (DerivedClassDecl->isPolymorphic() && CGM.getCodeGenOpts().SafeStaticCast) {
+      if (auto *SrcClassDecl =
+              dyn_cast<CXXRecordDecl>(BaseClassTy->getDecl())) {
+        if (SrcClassDecl->isPolymorphic()) {
+          auto *DCE = cast<CXXStaticCastExpr>(E);
+          CGM.EmitExplicitCastExprType(cast<CXXStaticCastExpr>(E), this);
+          QualType DestTy = DCE->getTypeAsWritten();
+          QualType SrcTy = DCE->getSubExpr()->getType();
+
+          // C++ [expr.dynamic.cast]p7:
+          //   If T is "pointer to cv void," then the result is a pointer to the
+          //   most derived object pointed to by v.
+          bool IsDynamicCastToVoid = DestTy->isVoidPointerType();
+          QualType SrcRecordTy;
+          QualType DestRecordTy;
+          if (IsDynamicCastToVoid) {
+            SrcRecordTy = SrcTy->getPointeeType();
+            // No DestRecordTy.
+          } else if (const PointerType *DestPTy =
+                         DestTy->getAs<PointerType>()) {
+            SrcRecordTy = SrcTy->castAs<PointerType>()->getPointeeType();
+            DestRecordTy = DestPTy->getPointeeType();
+          } else {
+            SrcRecordTy = SrcTy;
+            DestRecordTy = DestTy->castAs<ReferenceType>()->getPointeeType();
+          }
+
+          llvm::BasicBlock *CastEnd = createBasicBlock("dynamic_cast.end");
+          llvm::Value *Value = CGM.getCXXABI().emitDynamicCastCall(
+              *this, LV.getAddress(*this), SrcRecordTy, DestTy, DestRecordTy,
+              CastEnd);
+          EmitBlock(CastEnd);
+          return MakeNaturalAlignAddrLValue(Value, E->getType());
+        }
+      }
+    }
 
     // Perform the base-to-derived conversion
     Address Derived = GetAddressOfDerivedClass(

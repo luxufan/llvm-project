@@ -88,4 +88,5 @@ define void @f3(i32 %x) !type !8 {
 ; SUMMARY-NEXT: CfiFunctionDecls:
 ; SUMMARY-NEXT:   - external
 ; SUMMARY-NEXT:   - external_weak
+; SUMMARY-NEXT: VTableOffsetAdjust:
 ; SUMMARY-NEXT: ...

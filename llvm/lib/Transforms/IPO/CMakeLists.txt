@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMipo
   ConstantMerge.cpp
   CrossDSOCFI.cpp
   DeadArgumentElimination.cpp
+  DynCastOPT.cpp
   ElimAvailExtern.cpp
   EmbedBitcodePass.cpp
   ExtractGV.cpp
@@ -41,6 +42,8 @@ add_llvm_component_library(LLVMipo
   StripSymbols.cpp
   SyntheticCountsPropagation.cpp
   ThinLTOBitcodeWriter.cpp
+  RTTIClean.cpp
+  CountRTTI.cpp
   WholeProgramDevirt.cpp
 
   ADDITIONAL_HEADER_DIRS

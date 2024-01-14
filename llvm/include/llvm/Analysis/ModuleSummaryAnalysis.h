@@ -16,6 +16,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/ADT/SetVector.h"
 #include <functional>
 #include <optional>
 
@@ -102,6 +103,11 @@ createImmutableModuleSummaryIndexWrapperPass(const ModuleSummaryIndex *Index);
 /// Returns true if the instruction could have memprof metadata, used to ensure
 /// consistency between summary analysis and the ThinLTO backend processing.
 bool mayHaveMemprofSummary(const CallBase *CB);
+
+
+bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
+                  SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
+                  bool PerModule);
 
 } // end namespace llvm
 

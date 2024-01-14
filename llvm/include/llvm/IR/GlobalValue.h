@@ -36,6 +36,7 @@ class ConstantRange;
 class Error;
 class GlobalObject;
 class Module;
+class Metadata;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -206,6 +207,33 @@ public:
     return getType()->getAddressSpace();
   }
 
+  // VCallVisibility - values for visibility metadata attached to vtables. This
+  // describes the scope in which a virtual call could end up being dispatched
+  // through this vtable.
+  enum VCallVisibility {
+    // Type is potentially visible to external code.
+    VCallVisibilityPublic = 0,
+    // Type is only visible to code which will be in the current Module after
+    // LTO internalization.
+    VCallVisibilityLinkageUnit = 1,
+    // Type is only visible to code in the current Module.
+    VCallVisibilityTranslationUnit = 2,
+  };
+
+  using Value::addMetadata;
+  using Value::clearMetadata;
+  using Value::eraseMetadata;
+  using Value::getAllMetadata;
+  using Value::getMetadata;
+  using Value::hasMetadata;
+  using Value::setMetadata;
+
+  /// Copy metadata from Src, adjusting offsets by Offset.
+  void copyMetadata(const GlobalValue *Src, unsigned Offset);
+
+  void addTypeMetadata(unsigned Offset, Metadata *TypeID);
+  void setVCallVisibilityMetadata(VCallVisibility Visibility);
+  VCallVisibility getVCallVisibility() const;
   enum class UnnamedAddr {
     None,
     Local,

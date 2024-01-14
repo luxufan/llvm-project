@@ -577,6 +577,10 @@ public:
   /// Return the list of values referenced by this global value definition.
   ArrayRef<ValueInfo> refs() const { return RefEdgeList; }
 
+  void updateRefs(const std::vector<ValueInfo> &Refs) {
+    RefEdgeList = Refs;
+  }
+
   /// If this is an alias summary, returns the summary of the aliased object (a
   /// global variable or function), otherwise returns itself.
   GlobalValueSummary *getBaseObject();
@@ -1290,8 +1294,21 @@ private:
   /// with that type identifier's metadata. Produced by per module summary
   /// analysis and consumed by thin link. For more information, see description
   /// above where TypeIdCompatibleVtableInfo is defined.
-  std::map<std::string, TypeIdCompatibleVtableInfo, std::less<>>
+  std::map<StringRef, TypeIdCompatibleVtableInfo, std::less<>>
       TypeIdCompatibleVtableMap;
+
+  /// TODO: the key should be GUID.
+  /// Mapping from typeid to count
+  /// The count means the number of dynamic_cast that cast to typeid.
+  StringMap<uint64_t> DynCastDsts;
+  StringMap<uint64_t> DynCastSrcs;
+
+  StringMap<SmallVector<int64_t, 1>> VTableAccesses;
+  DenseSet<StringRef> RttisUsedByNonDyncast;
+
+  std::set<std::string> AliveRttis;
+
+  std::map<GlobalValue::GUID, std::map<uint64_t, uint64_t>> OffsetAdjusts;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
   /// GUIDs, it will be mapped to 0.
@@ -1389,12 +1406,23 @@ public:
       : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
         UnifiedLTO(UnifiedLTO), Saver(Alloc), BlockCount(0) {}
 
+  bool Thin = false;
+
+  DenseSet<GlobalValueSummary *> MayLive;
+
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
   static constexpr uint64_t BitcodeSummaryVersion = 9;
+
+  // Map from the destination type id of __dynamic_cast to the global variable
+  // and its type hierarch subtree index range in the merged virtual table group.
+  std::map<std::string, std::pair<std::string, std::pair<uint64_t, uint64_t>>>
+      RangeMap;
+
+  std::set<std::string> virtualInherts;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
@@ -1785,12 +1813,54 @@ public:
     return TypeIdCompatibleVtableMap;
   }
 
+  const auto &dynCastDstMap() const { return DynCastDsts; }
+  const auto &dynCastSrcMap() const { return DynCastSrcs; }
+
+  void addDynCastDst(StringRef TypeId, uint64_t Count = 1) {
+    DynCastDsts[TypeId] += Count;
+  }
+
+  void addDynCastSrc(StringRef TypeId, uint64_t Count = 1) {
+    DynCastSrcs[TypeId] += Count;
+  }
+
+  const auto &vtableAccesses() const { return VTableAccesses; }
+
+  void addVTableAccess(StringRef TypeId, int64_t Offset) {
+    VTableAccesses[TypeId].push_back(Offset);
+  }
+
+  void addOffsetAdjusts(GlobalValue::GUID Guid, uint64_t OldOffset, uint64_t NewOffset) {
+    OffsetAdjusts[Guid][OldOffset] = NewOffset;
+  }
+
+  bool needsAdjustOffset(GlobalValue::GUID Guid) const {
+    return OffsetAdjusts.count(Guid) != 0;
+  }
+
+  const auto &getAdjustOffsets(GlobalValue::GUID Guid) const {
+    assert(OffsetAdjusts.find(Guid) != OffsetAdjusts.end());
+    return *OffsetAdjusts.find(Guid);
+  }
+
+  const auto &rttisUsedByNonDyncast() const { return RttisUsedByNonDyncast; }
+
+  const auto &aliveRttis() const { return AliveRttis; }
+
+  void addRttiUsedByNonDyncast(StringRef TypeId) {
+    RttisUsedByNonDyncast.insert(TypeId);
+  }
+
+  void addAliveRtti(StringRef TypeId) {
+    AliveRttis.insert(TypeId.str());
+  }
+
   /// Return an existing or new TypeIdCompatibleVtableMap entry for \p TypeId.
   /// This accessor can mutate the map and therefore should not be used in
   /// the ThinLTO backends.
   TypeIdCompatibleVtableInfo &
   getOrInsertTypeIdCompatibleVtableSummary(StringRef TypeId) {
-    return TypeIdCompatibleVtableMap[std::string(TypeId)];
+    return TypeIdCompatibleVtableMap[TypeId];
   }
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap

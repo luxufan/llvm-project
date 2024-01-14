@@ -46,6 +46,7 @@
 #include "llvm/Transforms/IPO/ConstantMerge.h"
 #include "llvm/Transforms/IPO/CrossDSOCFI.h"
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
+#include "llvm/Transforms/IPO/DynCastOPT.h"
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
@@ -63,6 +64,8 @@
 #include "llvm/Transforms/IPO/ModuleInliner.h"
 #include "llvm/Transforms/IPO/OpenMPOpt.h"
 #include "llvm/Transforms/IPO/PartialInlining.h"
+#include "llvm/Transforms/IPO/RTTIClean.h"
+#include "llvm/Transforms/IPO/CountRTTI.h"
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
@@ -276,6 +279,10 @@ static cl::opt<AttributorRunOption> AttributorRun(
 static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
+
+static cl::opt<bool> EnableDynamicCastOPT(
+    "enable-dyncastopt", cl::init(true), cl::Hidden,
+    cl::desc("Enable the dynamic cast optimization"));
 
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
@@ -1605,6 +1612,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
+  MPM.addPass(CountRTTIPass(ImportSummary, /*PreOpt*/ true));
 
   if (ImportSummary) {
     // For ThinLTO we must apply the context disambiguation decisions early, to
@@ -1627,6 +1635,10 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     //
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
     // metadata and intrinsics.
+    if (EnableDynamicCastOPT) {
+      MPM.addPass(DynCastOPTPass(nullptr, ImportSummary));
+      MPM.addPass(RTTICleanPass(nullptr, ImportSummary));
+    }
     MPM.addPass(WholeProgramDevirtPass(nullptr, ImportSummary));
     MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
@@ -1640,6 +1652,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // globals in the object file.
     MPM.addPass(EliminateAvailableExternallyPass());
     MPM.addPass(GlobalDCEPass());
+    MPM.addPass(CountRTTIPass(nullptr, /*PreOpt*/ false));
     return MPM;
   }
 
@@ -1651,6 +1664,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   MPM.addPass(buildModuleOptimizationPipeline(
       Level, ThinOrFullLTOPhase::ThinLTOPostLink));
 
+  MPM.addPass(CountRTTIPass(ImportSummary, /*PreOpt*/ false));
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
@@ -1674,8 +1688,13 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Create a function that performs CFI checks for cross-DSO calls with targets
   // in the current module.
   MPM.addPass(CrossDSOCFIPass());
+  MPM.addPass(CountRTTIPass(nullptr, /*PreOpt*/ true));
 
   if (Level == OptimizationLevel::O0) {
+    if (EnableDynamicCastOPT) {
+      MPM.addPass(DynCastOPTPass(ExportSummary, nullptr));
+      MPM.addPass(RTTICleanPass(ExportSummary, nullptr));
+    }
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
     // metadata and intrinsics.
     MPM.addPass(WholeProgramDevirtPass(ExportSummary, nullptr));
@@ -1688,6 +1707,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
     // Emit annotation remarks.
     addAnnotationRemarksPass(MPM);
+    MPM.addPass(CountRTTIPass(nullptr, /*PreOpt*/ false));
 
     return MPM;
   }
@@ -1700,6 +1720,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+  }
+
+  if (EnableDynamicCastOPT) {
+    MPM.addPass(DynCastOPTPass(ExportSummary, nullptr));
+    MPM.addPass(RTTICleanPass(ExportSummary, nullptr));
   }
 
   // Try to run OpenMP optimizations, quick no-op if no OpenMP metadata present.
@@ -1976,6 +2001,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
+  MPM.addPass(CountRTTIPass(nullptr, /*PreOpt*/ false));
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 

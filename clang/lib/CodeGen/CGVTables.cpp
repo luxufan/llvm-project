@@ -22,6 +22,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/FileSystem.h"
 #include <algorithm>
 #include <cstdio>
 #include <utility>
@@ -1139,8 +1141,44 @@ void CodeGenModule::EmitVTable(CXXRecordDecl *theClass) {
   VTables.GenerateClassData(theClass);
 }
 
+static void printClass(const CXXRecordDecl *RD) {
+  std::error_code EC;
+  std::unique_ptr<llvm::raw_fd_ostream> File = std::make_unique<llvm::raw_fd_ostream>(
+  "/tmp/class.txt", EC, llvm::sys::fs::OpenFlags::OF_Append);
+
+  *File << RD->getName() << " ";
+  if (RD->isEffectivelyFinal())
+    *File << "final ";
+  if (RD->bases().empty())
+    *File << "nobase" << "\n";
+  else {
+    *File << "base: ";
+    for (auto Base : RD->bases()) {
+      *File << "(";
+      auto AS = Base.getAccessSpecifier();
+      if (AS == AS_protected)
+        *File << "protected, ";
+      else if (AS == AS_public)
+        *File << "public, ";
+      else if (AS == AS_private)
+        *File << "private, ";
+      else
+        *File << "none, ";
+
+      if (Base.isVirtual())
+        *File << "virtual";
+      else
+        *File << "nonvirt";
+
+      *File << ")";
+    }
+    *File << "\n";
+  }
+}
+
 void
 CodeGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
+  printClass(RD);
   if (CGDebugInfo *DI = CGM.getModuleDebugInfo())
     DI->completeClassData(RD);
 

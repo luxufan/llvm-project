@@ -17,13 +17,15 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ConstantFold.h"
 
 using namespace llvm;
 
 // Search for virtual calls that call FPtr and add them to DevirtCalls.
 static void
 findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
-                          bool *HasNonCallUses, Value *FPtr, uint64_t Offset,
+                          SmallVectorImpl<int64_t> &NegativeOffsets,
+                          bool *HasNonCallUses, Value *FPtr, int64_t Offset,
                           const CallInst *CI, DominatorTree &DT) {
   for (const Use &U : FPtr->uses()) {
     Instruction *User = cast<Instruction>(U.getUser());
@@ -35,37 +37,55 @@ findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
     // indirect call.
     if (!DT.dominates(CI, User))
       continue;
+
+    auto *CI = dyn_cast<CallInst>(User);
+    auto *II = dyn_cast<InvokeInst>(User);
     if (isa<BitCastInst>(User)) {
-      findCallsAtConstantOffset(DevirtCalls, HasNonCallUses, User, Offset, CI,
-                                DT);
-    } else if (auto *CI = dyn_cast<CallInst>(User)) {
-      DevirtCalls.push_back({Offset, *CI});
-    } else if (auto *II = dyn_cast<InvokeInst>(User)) {
-      DevirtCalls.push_back({Offset, *II});
-    } else if (HasNonCallUses) {
-      *HasNonCallUses = true;
+      findCallsAtConstantOffset(DevirtCalls, NegativeOffsets, HasNonCallUses,
+                                User, Offset, CI, DT);
+    } else if (CI && CI->getCalledOperand() == FPtr) {
+      DevirtCalls.push_back({static_cast<uint64_t>(Offset), *CI});
+    } else if (II && II->getCalledOperand() == FPtr) {
+      DevirtCalls.push_back({static_cast<uint64_t>(Offset), *II});
+    } else if (Offset < 0) {
+      NegativeOffsets.push_back(Offset);
+      if (HasNonCallUses)
+        *HasNonCallUses = true;
     }
   }
 }
 
+static void
+findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
+                          bool *HasNonCallUses, Value *FPtr, int64_t Offset,
+                          const CallInst *CI, DominatorTree &DT) {
+  SmallVector<int64_t, 1> NegativeOffsets;
+  findCallsAtConstantOffset(DevirtCalls, NegativeOffsets, HasNonCallUses, FPtr,
+                            Offset, CI, DT);
+}
+
 // Search for virtual calls that load from VPtr and add them to DevirtCalls.
 static void findLoadCallsAtConstantOffset(
-    const Module *M, SmallVectorImpl<DevirtCallSite> &DevirtCalls, Value *VPtr,
-    int64_t Offset, const CallInst *CI, DominatorTree &DT) {
+    const Module *M, SmallVectorImpl<DevirtCallSite> &DevirtCalls,
+    SmallVectorImpl<int64_t> &NegativeOffsets, Value *VPtr, int64_t Offset,
+    const CallInst *CI, DominatorTree &DT, bool *HasNonCallUses = nullptr) {
   for (const Use &U : VPtr->uses()) {
     Value *User = U.getUser();
     if (isa<BitCastInst>(User)) {
-      findLoadCallsAtConstantOffset(M, DevirtCalls, User, Offset, CI, DT);
+      findLoadCallsAtConstantOffset(M, DevirtCalls, NegativeOffsets, User,
+                                    Offset, CI, DT, HasNonCallUses);
     } else if (isa<LoadInst>(User)) {
-      findCallsAtConstantOffset(DevirtCalls, nullptr, User, Offset, CI, DT);
+      findCallsAtConstantOffset(DevirtCalls, NegativeOffsets, HasNonCallUses,
+                                User, Offset, CI, DT);
     } else if (auto GEP = dyn_cast<GetElementPtrInst>(User)) {
       // Take into account the GEP offset.
       if (VPtr == GEP->getPointerOperand() && GEP->hasAllConstantIndices()) {
         SmallVector<Value *, 8> Indices(drop_begin(GEP->operands()));
         int64_t GEPOffset = M->getDataLayout().getIndexedOffsetInType(
             GEP->getSourceElementType(), Indices);
-        findLoadCallsAtConstantOffset(M, DevirtCalls, User, Offset + GEPOffset,
-                                      CI, DT);
+        findLoadCallsAtConstantOffset(M, DevirtCalls, NegativeOffsets, User,
+                                      Offset + GEPOffset, CI, DT,
+                                      HasNonCallUses);
       }
     }
   }
@@ -73,8 +93,9 @@ static void findLoadCallsAtConstantOffset(
 
 void llvm::findDevirtualizableCallsForTypeTest(
     SmallVectorImpl<DevirtCallSite> &DevirtCalls,
-    SmallVectorImpl<CallInst *> &Assumes, const CallInst *CI,
-    DominatorTree &DT) {
+    SmallVectorImpl<int64_t> &NegativeOffsets,
+    SmallVectorImpl<CallInst *> &Assumes, const CallInst *CI, DominatorTree &DT,
+    bool *HasNonCallUses) {
   assert(CI->getCalledFunction()->getIntrinsicID() == Intrinsic::type_test ||
          CI->getCalledFunction()->getIntrinsicID() ==
              Intrinsic::public_type_test);
@@ -89,8 +110,9 @@ void llvm::findDevirtualizableCallsForTypeTest(
   // If we found any, search for virtual calls based on %p and add them to
   // DevirtCalls.
   if (!Assumes.empty())
-    findLoadCallsAtConstantOffset(
-        M, DevirtCalls, CI->getArgOperand(0)->stripPointerCasts(), 0, CI, DT);
+    findLoadCallsAtConstantOffset(M, DevirtCalls, NegativeOffsets,
+                                  CI->getArgOperand(0)->stripPointerCasts(), 0,
+                                  CI, DT, HasNonCallUses);
 }
 
 void llvm::findDevirtualizableCallsForTypeCheckedLoad(

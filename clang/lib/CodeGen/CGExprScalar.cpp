@@ -2039,6 +2039,21 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
   return true;
 }
 
+static llvm::Value *EmitDynamicCastToNull(CodeGenFunction &CGF,
+                                          QualType DestTy) {
+  llvm::Type *DestLTy = CGF.ConvertType(DestTy);
+  if (DestTy->isPointerType())
+    return llvm::Constant::getNullValue(DestLTy);
+
+  /// C++ [expr.dynamic.cast]p9:
+  ///   A failed cast to reference type throws std::bad_cast
+  if (!CGF.CGM.getCXXABI().EmitBadCastCall(CGF))
+    return nullptr;
+
+  CGF.Builder.ClearInsertionPoint();
+  return llvm::PoisonValue::get(DestLTy);
+}
+
 // VisitCastExpr - Emit code for an explicit or implicit cast.  Implicit casts
 // have to handle a more broad range of conversions than explicit casts, as they
 // handle things like function to ptr-to-function decay etc.
@@ -2237,6 +2252,69 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       CGF.GetAddressOfDerivedClass(Base, DerivedClassDecl,
                                    CE->path_begin(), CE->path_end(),
                                    CGF.ShouldNullCheckClassCastValue(CE));
+    const CXXRecordDecl *SrcClassDecl =
+        CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
+
+    if (DerivedClassDecl->isPolymorphic() && SrcClassDecl->isPolymorphic() &&
+        CGF.CGM.getCodeGenOpts().SafeStaticCast) {
+      if (SrcClassDecl->isPolymorphic()) {
+        QualType DestTy = CE->getType();
+        QualType SrcTy = CE->getSubExpr()->getType();
+
+        // C++ [expr.dynamic.cast]p7:
+        //   If T is "pointer to cv void," then the result is a pointer to the
+        //   most derived object pointed to by v.
+        bool IsDynamicCastToVoid = DestTy->isVoidPointerType();
+        QualType SrcRecordTy;
+        QualType DestRecordTy;
+        if (IsDynamicCastToVoid) {
+          SrcRecordTy = SrcTy->getPointeeType();
+          // No DestRecordTy.
+        } else if (const PointerType *DestPTy = DestTy->getAs<PointerType>()) {
+          SrcRecordTy = SrcTy->castAs<PointerType>()->getPointeeType();
+          DestRecordTy = DestPTy->getPointeeType();
+        } else {
+          SrcRecordTy = SrcTy;
+          DestRecordTy = DestTy->castAs<ReferenceType>()->getPointeeType();
+        }
+
+        bool ShouldNullCheckSrcValue =
+          CGF.CGM.getCXXABI().shouldDynamicCastCallBeNullChecked(
+                     SrcTy->isPointerType(), SrcRecordTy);
+        llvm::BasicBlock *CastNull = nullptr;
+        llvm::BasicBlock *CastNotNull = nullptr;
+        llvm::BasicBlock *CastEnd = CGF.createBasicBlock("dynamic_cast.end");
+
+        if (ShouldNullCheckSrcValue) {
+          CastNull = CGF.createBasicBlock("dynamic_cast.null");
+          CastNotNull = CGF.createBasicBlock("dynamic_cast.notnull");
+          llvm::Value *IsNull = Builder.CreateIsNull(Base.getPointer());
+          Builder.CreateCondBr(IsNull, CastNull, CastNotNull);
+          CGF.EmitBlock(CastNotNull);
+        }
+
+        llvm::Value *Value = CGF.CGM.getCXXABI().emitDynamicCastCall(
+            CGF, Base, SrcRecordTy, DestTy, DestRecordTy, CastEnd);
+        CastNotNull = Builder.GetInsertBlock();
+
+        llvm::Value *NullValue = nullptr;
+        if (ShouldNullCheckSrcValue) {
+          CGF.EmitBranch(CastEnd);
+          CGF.EmitBlock(CastNull);
+          NullValue = EmitDynamicCastToNull(CGF, DestTy);
+          CGF.EmitBranch(CastEnd);
+        }
+
+        CGF.EmitBlock(CastEnd);
+        if (CastNull) {
+          llvm::PHINode *PHI = Builder.CreatePHI(Value->getType(), 2);
+          PHI->addIncoming(Value, CastNotNull);
+          PHI->addIncoming(NullValue, CastNull);
+          Value = PHI;
+        }
+        return Value;
+      }
+    }
 
     // C++11 [expr.static.cast]p11: Behavior is undefined if a downcast is
     // performed and the object is not of the derived type.

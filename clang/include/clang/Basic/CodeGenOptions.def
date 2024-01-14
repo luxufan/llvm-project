@@ -327,6 +327,7 @@ CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 
 CODEGENOPT(WholeProgramVTables, 1, 0) ///< Whether to apply whole-program
                                       ///  vtable optimization.
+CODEGENOPT(SafeStaticCast, 1, 0)      ///< Whether to apply safe static cast
 
 CODEGENOPT(VirtualFunctionElimination, 1, 0) ///< Whether to apply the dead
                                              /// virtual function elimination

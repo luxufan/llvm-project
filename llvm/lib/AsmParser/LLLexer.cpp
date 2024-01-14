@@ -769,6 +769,11 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(args);
   KEYWORD(typeid);
   KEYWORD(typeidCompatibleVTable);
+  KEYWORD(dyncastdst);
+  KEYWORD(dyncastsrc);
+  KEYWORD(vtableaccesses);
+  KEYWORD(rttisusedbynondyncast);
+  KEYWORD(count);
   KEYWORD(summary);
   KEYWORD(typeTestRes);
   KEYWORD(kind);

@@ -362,6 +362,7 @@ namespace llvm {
                                     bool inAttrGrp, LocTy &BuiltinLoc);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);
+    bool parseAPSInt(unsigned BitWidth, APInt &Val);
 
     // Module Summary Index Parsing.
     bool skipModuleSummaryEntry();
@@ -407,6 +408,10 @@ namespace llvm {
     bool parseTypeIdEntry(unsigned ID);
     bool parseTypeIdSummary(TypeIdSummary &TIS);
     bool parseTypeIdCompatibleVtableEntry(unsigned ID);
+    bool parseDyncastDsts(unsigned ID);
+    bool parseDyncastSrcs(unsigned ID);
+    bool parseVTableAccesses(unsigned ID);
+    bool parseRttiUsedByNonDyncast(unsigned ID);
     bool parseTypeTestResolution(TypeTestResolution &TTRes);
     bool parseOptionalWpdResolutions(
         std::map<uint64_t, WholeProgramDevirtResolution> &WPDResMap);

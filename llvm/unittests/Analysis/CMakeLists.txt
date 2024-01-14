@@ -20,6 +20,7 @@ set(ANALYSIS_TEST_SOURCES
   CaptureTrackingTest.cpp
   CFGTest.cpp
   CGSCCPassManagerTest.cpp
+  ClassHierarchyAnalysisTest.cpp
   ConstraintSystemTest.cpp
   DDGTest.cpp
   DomTreeUpdaterTest.cpp

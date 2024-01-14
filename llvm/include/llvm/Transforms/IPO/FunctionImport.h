@@ -183,7 +183,7 @@ void updateIndirectCalls(ModuleSummaryIndex &Index);
 void computeDeadSymbolsAndUpdateIndirectCalls(
     ModuleSummaryIndex &Index,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
-    function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing);
+    function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing, bool AfterRegularLTO = false);
 
 /// Compute dead symbols and run constant propagation in combined index
 /// after that.
@@ -191,7 +191,7 @@ void computeDeadSymbolsWithConstProp(
     ModuleSummaryIndex &Index,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
-    bool ImportEnabled);
+    bool ImportEnabled, bool AfterRegularLTO = false);
 
 /// Converts value \p GV to declaration, or replaces with a declaration if
 /// it is an alias. Returns true if converted, false if replaced.

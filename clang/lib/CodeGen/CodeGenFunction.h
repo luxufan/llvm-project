@@ -2957,6 +2957,7 @@ public:
 
   llvm::Value *EmitCXXTypeidExpr(const CXXTypeidExpr *E);
   llvm::Value *EmitDynamicCast(Address V, const CXXDynamicCastExpr *DCE);
+  llvm::Value *EmitDynamicCast(Address V, const CXXStaticCastExpr *DCE);
   Address EmitCXXUuidofExpr(const CXXUuidofExpr *E);
 
   /// Situations in which we might emit a check for the suitability of a

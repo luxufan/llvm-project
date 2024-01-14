@@ -1,0 +1,8 @@
+---
+GlobalValueMap:  {}
+TypeIdMap:       {}
+WithGlobalValueDeadStripping: false
+VTableOffsetAdjust:
+  7199889692870024414:
+    16:              0
+...

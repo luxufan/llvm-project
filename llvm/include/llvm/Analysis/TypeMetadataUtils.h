@@ -15,6 +15,8 @@
 #define LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 
 #include <cstdint>
+#include <llvm/ADT/SmallVector.h>
+#include <utility>
 
 namespace llvm {
 
@@ -46,8 +48,18 @@ struct DevirtCallSite {
 /// call sites based on the call and return them in DevirtCalls.
 void findDevirtualizableCallsForTypeTest(
     SmallVectorImpl<DevirtCallSite> &DevirtCalls,
-    SmallVectorImpl<CallInst *> &Assumes, const CallInst *CI,
-    DominatorTree &DT);
+    SmallVectorImpl<int64_t> &NegativeOffsets,
+    SmallVectorImpl<CallInst *> &Assumes, const CallInst *CI, DominatorTree &DT,
+    bool *HasNonCallUses = nullptr);
+
+inline void findDevirtualizableCallsForTypeTest(
+    SmallVectorImpl<DevirtCallSite> &DevirtCalls,
+    SmallVectorImpl<CallInst *> &Assumes, const CallInst *CI, DominatorTree &DT,
+    bool *HasNonCallUses = nullptr) {
+  SmallVector<int64_t, 1> NegativeOffsets;
+  findDevirtualizableCallsForTypeTest(DevirtCalls, NegativeOffsets, Assumes, CI,
+                                      DT, HasNonCallUses);
+}
 
 /// Given a call to the intrinsic \@llvm.type.checked.load, find all
 /// devirtualizable call sites based on the call and return them in DevirtCalls.

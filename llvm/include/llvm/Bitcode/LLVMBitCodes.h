@@ -319,6 +319,18 @@ enum GlobalValueSummarySymtabCodes {
   //  numver x version]
   FS_COMBINED_ALLOC_INFO = 29,
   FS_STACK_IDS = 30,
+
+  // [n x (typeid, count)]
+  FS_DYNCAST_DST = 31,
+
+  // [n x (typeid, offset)]
+  FS_VTABLE_ACCESSES = 32,
+
+  // [n x (typeinfo, offset)]
+  FS_RTTIS_USED_BY_NON_DYNCAST = 33,
+
+  // [n x (typeid, count)]
+  FS_DYNCAST_SRC = 34,
 };
 
 enum MetadataCodes {

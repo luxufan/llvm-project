@@ -935,6 +935,10 @@ private:
   Error parseEntireSummary(unsigned ID);
   Error parseModuleStringTable();
   void parseTypeIdCompatibleVtableSummaryRecord(ArrayRef<uint64_t> Record);
+  void parseDynCastDstsRecord(ArrayRef<uint64_t> Record);
+  void parseDynCastSrcsRecord(ArrayRef<uint64_t> Record);
+  void parseVTableAccessesRecord(ArrayRef<uint64_t> Record);
+  void parseRttisUsedByNonDyncast(ArrayRef<uint64_t> Record);
   void parseTypeIdCompatibleVtableInfo(ArrayRef<uint64_t> Record, size_t &Slot,
                                        TypeIdCompatibleVtableInfo &TypeId);
   std::vector<FunctionSummary::ParamAccess>
@@ -7189,6 +7193,47 @@ void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableSummaryRecord(
     parseTypeIdCompatibleVtableInfo(Record, Slot, TypeId);
 }
 
+void ModuleSummaryIndexBitcodeReader::parseDynCastDstsRecord(
+    ArrayRef<uint64_t> Record) {
+  size_t Slot = 0;
+  while (Slot < Record.size()) {
+    TheIndex.addDynCastDst(
+        {Strtab.data() + Record[Slot], static_cast<size_t>(Record[Slot + 1])},
+        Record[Slot + 2]);
+    Slot += 3;
+  }
+}
+
+void ModuleSummaryIndexBitcodeReader::parseDynCastSrcsRecord(
+    ArrayRef<uint64_t> Record) {
+  size_t Slot = 0;
+  while (Slot < Record.size()) {
+    TheIndex.addDynCastSrc(
+        {Strtab.data() + Record[Slot], static_cast<size_t>(Record[Slot + 1])},
+        Record[Slot + 2]);
+    Slot += 3;
+  }
+}
+
+void ModuleSummaryIndexBitcodeReader::parseRttisUsedByNonDyncast(ArrayRef<uint64_t> Record) {
+  size_t Slot = 0;
+  while (Slot < Record.size()) {
+    TheIndex.addRttiUsedByNonDyncast({Strtab.data() + Record[Slot], static_cast<size_t>(Record[Slot + 1])});
+    Slot += 2;
+  }
+}
+
+void ModuleSummaryIndexBitcodeReader::parseVTableAccessesRecord(
+    ArrayRef<uint64_t> Record) {
+  size_t Slot = 0;
+  while (Slot < Record.size()) {
+    TheIndex.addVTableAccess(
+        {Strtab.data() + Record[Slot], static_cast<size_t>(Record[Slot + 1])},
+        Record[Slot + 2]);
+    Slot += 3;
+  }
+}
+
 static void setSpecialRefs(std::vector<ValueInfo> &Refs, unsigned ROCnt,
                            unsigned WOCnt) {
   // Readonly and writeonly refs are in the end of the refs list.
@@ -7619,6 +7664,22 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_TYPE_ID:
       parseTypeIdSummaryRecord(Record, Strtab, TheIndex);
+      break;
+
+    case bitc::FS_RTTIS_USED_BY_NON_DYNCAST:
+      parseRttisUsedByNonDyncast(Record);
+      break;
+
+    case bitc::FS_VTABLE_ACCESSES:
+      parseVTableAccessesRecord(Record);
+      break;
+
+    case bitc::FS_DYNCAST_DST:
+      parseDynCastDstsRecord(Record);
+      break;
+
+    case bitc::FS_DYNCAST_SRC:
+      parseDynCastSrcsRecord(Record);
       break;
 
     case bitc::FS_TYPE_ID_METADATA:

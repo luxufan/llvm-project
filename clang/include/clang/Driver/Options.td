@@ -3916,6 +3916,11 @@ defm whole_program_vtables : BoolFOption<"whole-program-vtables",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Enables whole-program vtable optimization. Requires -flto">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
+defm safe_static_cast : BoolFOption<"safe-static-cast",
+  CodeGenOpts<"SafeStaticCast">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enables safe static cast optimization.">,
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
 defm split_lto_unit : BoolFOption<"split-lto-unit",
   CodeGenOpts<"EnableSplitLTOUnit">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
