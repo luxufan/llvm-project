@@ -8,6 +8,20 @@ const int64_t VirtualMask = 1;
 const int64_t PublicMaks = 2;
 const int64_t ShiftToOffset = 56;
 
+void DynCastOPTPass::invalidateExternalClass(const GlobalVariable *RTTI) {
+  assert(!RTTI->isInternalLinkage(RTTI->getLinkage()) && "This is a internal class");
+  SmallVector<const Value *> WorkList;
+  WorkList.push_back(RTTI);
+  while (!WorkList.empty()) {
+    const Value *Current = WorkList.pop_back_val();
+    if (CHA.contains(Current)) {
+      for (auto &Base : CHA[Current])
+        WorkList.push_back(Base.first);
+    }
+    Invalid.insert(Current);
+  }
+}
+
 void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     if (GV.hasName() &&
@@ -44,6 +58,8 @@ void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
       } else {
         assert(false && "Initializer is not a constant struct");
       }
+      if (!GV.isInternalLinkage(GV.getLinkage()))
+        invalidateExternalClass(&GV);
     }
   }
 }
@@ -113,7 +129,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   assert(Called->hasName() && Called->getName() == "__dynamic_cast");
   Value *DestType = CI->getArgOperand(2);
   Value *StaticPtr = CI->getArgOperand(0);
-  if (!isUniqueBaseInFullCHA(DestType))
+  if (invalidToOptimize(DestType) || !isUniqueBaseInFullCHA(DestType))
     return false;
 
   DenseSet<const Value *> Supers;
