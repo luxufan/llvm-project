@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMipo
   ConstantMerge.cpp
   CrossDSOCFI.cpp
   DeadArgumentElimination.cpp
+  DynCastOPT.cpp
   ElimAvailExtern.cpp
   EmbedBitcodePass.cpp
   ExtractGV.cpp
