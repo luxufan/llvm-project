@@ -48,3 +48,31 @@ dynamic_cast.end:                                 ; preds = %entry, %dynamic_cas
   %2 = phi ptr [ %1, %dynamic_cast.notnull ], [ null, %entry ]
   ret ptr %2
 }
+
+define internal ptr @_Z6dest_CP1A1(ptr %a) {
+; CHECK-LABEL: define internal ptr @_Z6dest_CP1A(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    br i1 [[TMP0]], label [[DYNAMIC_CAST_END:%.*]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
+; CHECK:       dynamic_cast.notnull:
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @__dynamic_cast(ptr [[P]], ptr nonnull @_ZTI1A, ptr nonnull @_ZTI1C, i64 -3)
+; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
+; CHECK:       dynamic_cast.end:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[TMP1]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[TMP2]]
+;
+entry:
+  %0 = icmp eq ptr %a, null
+  br i1 %0, label %dynamic_cast.end, label %dynamic_cast.notnull
+
+dynamic_cast.notnull:                             ; preds = %entry
+  %merge = phi i64 [0, %entry]
+  %1 = tail call ptr @__dynamic_cast(ptr %a, ptr nonnull @_ZTI1A, ptr nonnull @_ZTI1C, i64 -3) #7
+  br label %dynamic_cast.end
+
+dynamic_cast.end:                                 ; preds = %entry, %dynamic_cast.notnull
+  %2 = phi ptr [ %1, %dynamic_cast.notnull ], [ null, %entry ]
+  ret ptr %2
+}
