@@ -1,16 +1,17 @@
 #ifndef LLVM_TRANSFORMS_IPO_DYNCASTOPT_H
 #define LLVM_TRANSFORMS_IPO_DYNCASTOPT_H
 
-#include "llvm/IR/PassManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
 class DynCastOPTPass : public PassInfoMixin<DynCastOPTPass> {
   using BaseClass = std::pair<const Value *, int64_t>;
+
 private:
   // Map from class to its base classes and offset pair
   // Value * is the pointer of RTTI descriptor
@@ -20,8 +21,8 @@ private:
   // Value * is the pointer of RTTI descriptor
   DenseMap<const Value *, SmallVector<const Value *>> SuperClasses;
 
-  // Maps from class to its virtual table address pointer in itself's virtual table.
-  // The key is the pointer of RTTI descriptor
+  // Maps from class to its virtual table address pointer in itself's virtual
+  // table. The key is the pointer of RTTI descriptor
   DenseMap<const Value *, Constant *> VTables;
 
   // dynamic_cast to these classes can not be optimized.
@@ -35,7 +36,8 @@ private:
   // Get all of the super classes of Base, also include itself.
   void getSuperClasses(const Value *Base, DenseSet<const Value *> &Supers);
 
-  void getMostDerivedClasses(const Value *Base, DenseSet<const Value *> &MostDerivedClasses);
+  void getMostDerivedClasses(const Value *Base,
+                             DenseSet<const Value *> &MostDerivedClasses);
   bool handleDynCastCallSite(CallInst *CI);
   int64_t computeOffset(const Value *Base, const Value *Super);
 

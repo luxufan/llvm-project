@@ -1,7 +1,7 @@
 #include "llvm/Transforms/IPO/DynCastOPT.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/ADT/Statistic.h"
 
 #define DEBUG_TYPE "dyncastopt"
 
@@ -14,7 +14,8 @@ const int64_t PublicMaks = 2;
 const int64_t ShiftToOffset = 8;
 
 void DynCastOPTPass::invalidateExternalClass(const GlobalVariable *RTTI) {
-  assert(!RTTI->isInternalLinkage(RTTI->getLinkage()) && "This is a internal class");
+  assert(!RTTI->isInternalLinkage(RTTI->getLinkage()) &&
+         "This is a internal class");
   SmallVector<const Value *> WorkList;
   WorkList.push_back(RTTI);
   while (!WorkList.empty()) {
