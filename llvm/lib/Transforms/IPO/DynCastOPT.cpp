@@ -146,6 +146,13 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   assert(Called->hasName() && Called->getName() == "__dynamic_cast");
   Value *DestType = CI->getArgOperand(2);
   Value *StaticPtr = CI->getArgOperand(0);
+
+  // TODO: Split block to enable optimization for case that
+  // static ptr and __dynamic_cast are in the same block
+  if (auto *I = dyn_cast<Instruction>(StaticPtr)) {
+    if (I->getParent() == CI->getParent())
+      return false;
+  }
   if (invalidToOptimize(DestType) || !isUniqueBaseInFullCHA(DestType))
     return false;
 
