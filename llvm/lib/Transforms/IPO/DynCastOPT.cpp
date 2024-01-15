@@ -43,7 +43,7 @@ void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
           Value *Base = Initializer->getOperand(2);
           CHA[&GV].push_back(std::make_pair(Base, 0));
           SuperClasses[Base].push_back(&GV);
-        } else {
+        } else if (Initializer->getNumOperands() > 4) {
           unsigned NumBase =
               cast<ConstantInt>(Initializer->getOperand(3))->getZExtValue();
           for (unsigned I = 0; I < NumBase; I++) {
