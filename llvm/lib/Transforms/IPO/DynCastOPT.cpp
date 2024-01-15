@@ -30,8 +30,8 @@ void DynCastOPTPass::invalidateExternalClass(const GlobalVariable *RTTI) {
 
 void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
-    if (GV.hasName() &&
-        GV.getName().starts_with("_ZTI") && GV.hasInitializer()) {
+    if (GV.hasName() && GV.getName().starts_with("_ZTI") &&
+        GV.hasInitializer()) {
       if (ConstantStruct *Initializer =
               dyn_cast<ConstantStruct>(GV.getInitializer())) {
         // __class_type_info has type { ptr, ptr }
@@ -155,8 +155,8 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   if (Supers.size() > 2)
     return false;
 
-  BasicBlock *LoadBlock =
-      BasicBlock::Create(CI->getContext(), "load_block", CI->getFunction(), CI->getParent());
+  BasicBlock *LoadBlock = BasicBlock::Create(
+      CI->getContext(), "load_block", CI->getFunction(), CI->getParent());
   Type *PTy =
       PointerType::get(CI->getContext(), CI->getFunction()->getAddressSpace());
   Value *VPtr = new LoadInst(PTy, StaticPtr, "vptr", LoadBlock);
@@ -175,24 +175,25 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   SmallVector<BasicBlock *> BBs;
   for (unsigned I = 0; I < Supers.size(); I++) {
-    BBs.push_back(BasicBlock::Create(CI->getContext(), "check_super." + Twine(I), CI->getFunction(), CI->getParent()));
+    BBs.push_back(BasicBlock::Create(CI->getContext(),
+                                     "check_super." + Twine(I),
+                                     CI->getFunction(), CI->getParent()));
   }
 
   // Check fails
   BBs.push_back(CI->getParent());
 
   // Offset handle block
-  BBs.push_back(BasicBlock::Create(CI->getContext(), "handle_offset", CI->getFunction(), CI->getParent()));
+  BBs.push_back(BasicBlock::Create(CI->getContext(), "handle_offset",
+                                   CI->getFunction(), CI->getParent()));
 
   PHINode *Phi =
       PHINode::Create(Type::getInt64Ty(Context), Supers.size(), "", BBs.back());
 
-
-  // Replace all of the branch to dynamic_cast.not_null to the first check block.
-  // Only replace branch since replacing Phi node is incorrect.
-  CI->getParent()->replaceUsesWithIf(LoadBlock, [](Use &U) {
-    return isa<BranchInst>(U.getUser());
-  });
+  // Replace all of the branch to dynamic_cast.not_null to the first check
+  // block. Only replace branch since replacing Phi node is incorrect.
+  CI->getParent()->replaceUsesWithIf(
+      LoadBlock, [](Use &U) { return isa<BranchInst>(U.getUser()); });
   BranchInst::Create(BBs[0], LoadBlock);
 
   SmallVector<const Value *> SupersVector;
@@ -243,7 +244,8 @@ int64_t DynCastOPTPass::computeOffset(const Value *Base, const Value *Super) {
 
 void DynCastOPTPass::collectVirtualTables(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
-    if (GV.hasName() && GV.getName().starts_with("_ZTV") && GV.hasInitializer()) {
+    if (GV.hasName() && GV.getName().starts_with("_ZTV") &&
+        GV.hasInitializer()) {
       ConstantStruct *VTable = cast<ConstantStruct>(GV.getInitializer());
       ConstantArray *SubTable = cast<ConstantArray>(VTable->getOperand(0));
       uint64_t Offset = 0;
