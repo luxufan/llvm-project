@@ -278,7 +278,7 @@ PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {
       for (Instruction &I : BB) {
         if (CallInst *CI = dyn_cast<CallInst>(&I)) {
           Function *Called = CI->getCalledFunction();
-          if (Called->hasName() && Called->getName() == "__dynamic_cast") {
+          if (Called && Called->hasName() && Called->getName() == "__dynamic_cast") {
             if (handleDynCastCallSite(CI))
               Deleted.push_back(CI);
           }
