@@ -128,6 +128,17 @@ bool DynCastOPTPass::isUniqueBaseForSuper(const Value *Base,
   return ReachCount < 2;
 }
 
+void DynCastOPTPass::reduceSuperClasses(DenseSet<const Value *> &SuperClasses) {
+  SmallVector<const Value *> ToDelete;
+  for (auto *Class : SuperClasses) {
+    if (!VTables.contains(Class))
+      ToDelete.push_back(Class);
+  }
+
+  for (auto *Class : ToDelete)
+    SuperClasses.erase(Class);
+}
+
 bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   LLVMContext &Context = CI->getContext();
   Function *Called = CI->getCalledFunction();
@@ -139,6 +150,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   DenseSet<const Value *> Supers;
   getSuperClasses(DestType, Supers);
+  reduceSuperClasses(Supers);
   if (Supers.size() > 2)
     return false;
 
@@ -183,9 +195,10 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   BranchInst::Create(BBs[0], LoadBlock);
 
   SmallVector<const Value *> SupersVector;
-  for (const Value *Super : Supers)
+  for (const Value *Super : Supers) {
     SupersVector.push_back(Super);
-  for (unsigned I = 0; I < Supers.size(); I++) {
+  }
+  for (unsigned I = 0; I < SupersVector.size(); I++) {
     assert(VTables.contains(SupersVector[I]));
     Value *Result =
         CmpInst::Create(Instruction::ICmp, ICmpInst::Predicate::ICMP_EQ,
@@ -256,6 +269,8 @@ PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {
   collectVirtualTables(M);
   SmallVector<CallInst *> Deleted;
   for (Function &F : M.functions()) {
+    if (!F.isInternalLinkage(F.getLinkage()))
+      continue;
     for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
         if (CallInst *CI = dyn_cast<CallInst>(&I)) {

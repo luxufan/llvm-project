@@ -45,6 +45,12 @@ private:
   bool invalidToOptimize(const Value *RTTI) const {
     return Invalid.contains(RTTI);
   }
+
+  // For super classes that don't have corresponding virtual tables,
+  // it means there is no allocation site in current module.
+  // precondition: It can only be used when the function is internal
+  void reduceSuperClasses(DenseSet<const Value *> &SuperClasses);
+
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
