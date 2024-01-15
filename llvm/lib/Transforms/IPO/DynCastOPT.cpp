@@ -1,12 +1,17 @@
 #include "llvm/Transforms/IPO/DynCastOPT.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/ADT/Statistic.h"
+
+#define DEBUG_TYPE "dyncastopt"
+
+STATISTIC(NumOptDynCast, "Number of optimized dynamic_cast call site");
 
 namespace llvm {
 
 const int64_t VirtualMask = 1;
 const int64_t PublicMaks = 2;
-const int64_t ShiftToOffset = 56;
+const int64_t ShiftToOffset = 8;
 
 void DynCastOPTPass::invalidateExternalClass(const GlobalVariable *RTTI) {
   assert(!RTTI->isInternalLinkage(RTTI->getLinkage()) && "This is a internal class");
@@ -263,8 +268,10 @@ PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {
       }
     }
   }
-  for (auto *CI : Deleted)
+  for (auto *CI : Deleted) {
     CI->eraseFromParent();
+    NumOptDynCast++;
+  }
   return PreservedAnalyses::none();
 }
 
