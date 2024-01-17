@@ -129,15 +129,10 @@ bool DynCastOPTPass::isUniqueBaseForSuper(const Value *Base,
   return ReachCount < 2;
 }
 
-void DynCastOPTPass::reduceSuperClasses(DenseSet<const Value *> &SuperClasses) {
-  SmallVector<const Value *> ToDelete;
-  for (auto *Class : SuperClasses) {
-    if (!VTables.contains(Class))
-      ToDelete.push_back(Class);
-  }
-
-  for (auto *Class : ToDelete)
-    SuperClasses.erase(Class);
+bool DynCastOPTPass::hasPrevailingVTables(const DenseSet<const Value *> &RTTIs) {
+  return all_of(RTTIs, [this](const Value *RTTI) {
+    return VTables.contains(RTTI);
+  });
 }
 
 bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
@@ -160,7 +155,23 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   DenseSet<const Value *> Supers;
   getSuperClasses(DestType, Supers);
-  reduceSuperClasses(Supers);
+
+  // If not all super classes have the prevailing vritual table definition,
+  // then the optimization can not be performed.
+  // TODO: don't eliminate virtual table global variable in compilation if
+  // -flto is enabled.
+  if (!hasPrevailingVTables(Supers))
+    return false;
+
+  // FIXME: Reduce super classes by judge if there is prevailing virtual tables is wrong.
+  // Although no prevailing virtual tables means there is no allocation site for corresponding
+  // classes, allication sites may still exist in other linkage unit.
+  // TODO: If the virtual table will not be elimiated, then we can reduce the
+  // superclasses by if the virtual table is used by other regular object file.
+  // If it is not used and also not used in current LTO unit, then we can remove the
+  // check for this class type.
+
+
   if (Supers.size() > 2)
     return false;
 

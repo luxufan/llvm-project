@@ -33,6 +33,8 @@ private:
   bool isUniqueBaseInFullCHA(const Value *Base);
   bool isUniqueBaseForSuper(const Value *Base, const Value *Super);
 
+  bool hasPrevailingVTables(const DenseSet<const Value *> &RTTIs);
+
   // Get all of the super classes of Base, also include itself.
   void getSuperClasses(const Value *Base, DenseSet<const Value *> &Supers);
 
@@ -47,11 +49,6 @@ private:
   bool invalidToOptimize(const Value *RTTI) const {
     return Invalid.contains(RTTI);
   }
-
-  // For super classes that don't have corresponding virtual tables,
-  // it means there is no allocation site in current module.
-  // precondition: It can only be used when the function is internal
-  void reduceSuperClasses(DenseSet<const Value *> &SuperClasses);
 
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
