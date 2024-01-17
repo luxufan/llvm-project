@@ -2,6 +2,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/ADT/SetVector.h"
 
 #define DEBUG_TYPE "dyncastopt"
 
@@ -71,8 +72,8 @@ void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
 }
 
 void DynCastOPTPass::getMostDerivedClasses(
-    const Value *Base, DenseSet<const Value *> &MostDerivedClasses) {
-  DenseSet<const Value *> Supers;
+    const Value *Base, SetVector<const Value *> &MostDerivedClasses) {
+  SetVector<const Value *> Supers;
   getSuperClasses(Base, Supers);
   for (auto *Super : Supers) {
     const SmallVector<const Value *> SuperSupers = SuperClasses[Super];
@@ -82,7 +83,7 @@ void DynCastOPTPass::getMostDerivedClasses(
 }
 
 void DynCastOPTPass::getSuperClasses(const Value *Class,
-                                     DenseSet<const Value *> &Supers) {
+                                     SetVector<const Value *> &Supers) {
   SmallVector<const Value *> WorkList;
   Supers.insert(Class);
   WorkList.push_back(Class);
@@ -96,7 +97,7 @@ void DynCastOPTPass::getSuperClasses(const Value *Class,
 }
 
 bool DynCastOPTPass::isUniqueBaseInFullCHA(const Value *C) {
-  DenseSet<const Value *> MostDerivedClasses;
+  SetVector<const Value *> MostDerivedClasses;
   getMostDerivedClasses(C, MostDerivedClasses);
 
   for (const Value *Derived : MostDerivedClasses) {
@@ -129,7 +130,7 @@ bool DynCastOPTPass::isUniqueBaseForSuper(const Value *Base,
   return ReachCount < 2;
 }
 
-bool DynCastOPTPass::hasPrevailingVTables(const DenseSet<const Value *> &RTTIs) {
+bool DynCastOPTPass::hasPrevailingVTables(const SetVector<const Value *> &RTTIs) {
   return all_of(RTTIs, [this](const Value *RTTI) {
     return VTables.contains(RTTI);
   });
@@ -153,7 +154,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   if (invalidToOptimize(DestType) || !isUniqueBaseInFullCHA(DestType))
     return false;
 
-  DenseSet<const Value *> Supers;
+  SetVector<const Value *> Supers;
   getSuperClasses(DestType, Supers);
 
   // If not all super classes have the prevailing vritual table definition,

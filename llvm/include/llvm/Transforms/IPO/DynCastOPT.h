@@ -6,6 +6,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace llvm {
 
@@ -26,20 +27,20 @@ private:
   DenseMap<const Value *, Constant *> VTables;
 
   // dynamic_cast to these classes can not be optimized.
-  DenseSet<const Value *> Invalid;
+  SetVector<const Value *> Invalid;
 
   void buildTypeInfoGraph(Module &M);
   void collectVirtualTables(Module &M);
   bool isUniqueBaseInFullCHA(const Value *Base);
   bool isUniqueBaseForSuper(const Value *Base, const Value *Super);
 
-  bool hasPrevailingVTables(const DenseSet<const Value *> &RTTIs);
+  bool hasPrevailingVTables(const SetVector<const Value *> &RTTIs);
 
   // Get all of the super classes of Base, also include itself.
-  void getSuperClasses(const Value *Base, DenseSet<const Value *> &Supers);
+  void getSuperClasses(const Value *Base, SetVector<const Value *> &Supers);
 
   void getMostDerivedClasses(const Value *Base,
-                             DenseSet<const Value *> &MostDerivedClasses);
+                             SetVector<const Value *> &MostDerivedClasses);
   bool handleDynCastCallSite(CallInst *CI);
   int64_t computeOffset(const Value *Base, const Value *Super);
 
