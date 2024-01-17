@@ -183,20 +183,25 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   BasicBlock *LoadBlock = BasicBlock::Create(
       CI->getContext(), "load_block", CI->getFunction(), CI->getParent());
-  Value *VPtr = new LoadInst(PTy, StaticPtr, "vptr", LoadBlock);
-  Type *ByteType = Type::getInt8Ty(Context);
 
+  Value *RuntimePtr;
+  if (!isOffsetToTopMustZero(Supers)) {
   // offset-to-top is always placed in vptr - 16. FIXME: -16 is incorrect for 32
   // bit address space.
-  Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), -16);
-  Value *AddrOffsetToTop = GetElementPtrInst::CreateInBounds(
-      ByteType, VPtr, Idx, "add_offset_to_top", LoadBlock);
-  Value *OffsetToTop = new LoadInst(Type::getInt64Ty(Context), AddrOffsetToTop,
+    Value *VPtr = new LoadInst(PTy, StaticPtr, "vptr", LoadBlock);
+    Type *ByteType = Type::getInt8Ty(Context);
+    Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), -16);
+    Value *AddrOffsetToTop = GetElementPtrInst::CreateInBounds(
+        ByteType, VPtr, Idx, "add_offset_to_top", LoadBlock);
+    Value *OffsetToTop = new LoadInst(Type::getInt64Ty(Context), AddrOffsetToTop,
                                     "offset_to_top", LoadBlock);
-  Value *RuntimePtr = GetElementPtrInst::CreateInBounds(
-      ByteType, StaticPtr, OffsetToTop, "runtime_object", LoadBlock);
-  Value *RuntimeVPtr = new LoadInst(PTy, RuntimePtr, "runtime_vptr", LoadBlock);
+    RuntimePtr = GetElementPtrInst::CreateInBounds(
+        ByteType, StaticPtr, OffsetToTop, "runtime_object", LoadBlock);
+  } else {
+    RuntimePtr = StaticPtr;
+  }
 
+  Value *RuntimeVPtr = new LoadInst(PTy, RuntimePtr, "runtime_vptr", LoadBlock);
   SmallVector<BasicBlock *> BBs;
   for (unsigned I = 0; I < Supers.size(); I++) {
     BBs.push_back(BasicBlock::Create(CI->getContext(),
@@ -298,6 +303,17 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
       }
     }
   }
+}
+
+bool DynCastOPTPass::isOffsetToTopMustZero(SetVector<const Value *> &SuperClasses) {
+  // TODO: for non-linear, if the desitination type is the primary base class of
+  // its super class, then the offset-to-top value is must 0.
+  for (auto *Super : SuperClasses) {
+    if (CHA[Super].size() > 1)
+      return false;
+    assert(CHA[Super].size() == 1);
+  }
+  return true;
 }
 
 PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {

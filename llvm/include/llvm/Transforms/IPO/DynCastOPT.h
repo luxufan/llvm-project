@@ -51,6 +51,8 @@ private:
     return Invalid.contains(RTTI);
   }
 
+  bool isOffsetToTopMustZero(SetVector<const Value *> &SuperClasses);
+
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
