@@ -90,3 +90,23 @@ dynamic_cast.end:                                 ; preds = %entry, %dynamic_cas
   %2 = phi ptr [ %1, %dynamic_cast.notnull ], [ null, %entry ]
   ret ptr %2
 }
+
+define dso_local noundef i32 @main() {
+; CHECK-LABEL: define dso_local noundef i32 @main() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias noundef nonnull dereferenceable(24) ptr @_Znwm(i64 noundef 24)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(24) [[CALL]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1C, i64 0, inrange i32 0, i64 2), ptr [[CALL]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @__dynamic_cast(ptr nonnull [[CALL]], ptr nonnull @_ZTI1A, ptr nonnull @_ZTI2B1, i64 0)
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %call = tail call noalias noundef nonnull dereferenceable(24) ptr @_Znwm(i64 noundef 24)
+  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(24) %call, i8 0, i64 24, i1 false)
+  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1C, i64 0, inrange i32 0, i64 2), ptr %call, align 8
+  %0 = tail call ptr @__dynamic_cast(ptr nonnull %call, ptr nonnull @_ZTI1A, ptr nonnull @_ZTI2B1, i64 0)
+  ret i32 0
+}
+
+declare noundef nonnull ptr @_Znwm(i64 noundef)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
