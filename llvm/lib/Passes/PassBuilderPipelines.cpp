@@ -278,6 +278,10 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+static cl::opt<bool> EnableDynamicCastOPT(
+    "enable-dyncastopt", cl::init(true), cl::Hidden,
+    cl::desc("Enable the dynamic cast optimization"));
+
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
     "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
@@ -1703,7 +1707,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
   }
 
-  MPM.addPass(DynCastOPTPass());
+  if (EnableDynamicCastOPT)
+    MPM.addPass(DynCastOPTPass());
 
   // Try to run OpenMP optimizations, quick no-op if no OpenMP metadata present.
   MPM.addPass(OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink));
