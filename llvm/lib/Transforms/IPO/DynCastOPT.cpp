@@ -147,6 +147,8 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   Value *DestType = CI->getArgOperand(2);
   Value *StaticPtr = CI->getArgOperand(0);
 
+  Type *PTy =
+      PointerType::get(CI->getContext(), CI->getFunction()->getAddressSpace());
   // TODO: Split block to enable optimization for case that
   // static ptr and __dynamic_cast are in the same block
   if (auto *I = dyn_cast<Instruction>(StaticPtr)) {
@@ -162,10 +164,13 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   if (Supers.size() > 2)
     return false;
 
+  if (Supers.empty()) {
+    CI->replaceAllUsesWith(ConstantInt::getNullValue(PTy));
+    return true;
+  }
+
   BasicBlock *LoadBlock = BasicBlock::Create(
       CI->getContext(), "load_block", CI->getFunction(), CI->getParent());
-  Type *PTy =
-      PointerType::get(CI->getContext(), CI->getFunction()->getAddressSpace());
   Value *VPtr = new LoadInst(PTy, StaticPtr, "vptr", LoadBlock);
   Type *ByteType = Type::getInt8Ty(Context);
 
