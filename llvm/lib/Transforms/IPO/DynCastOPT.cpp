@@ -284,10 +284,11 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
       for (Value *Element : SubTable->operand_values()) {
         Offset += 1;
         if (CHA.contains(Element)) {
-          ArrayRef<Constant *> Idx = {
+          Constant *Idx[] = {
               ConstantInt::get(Type::getInt32Ty(M.getContext()), 0),
               ConstantInt::get(Type::getInt32Ty(M.getContext()), 0),
               ConstantInt::get(Type::getInt64Ty(M.getContext()), Offset)};
+
           Constant *AddressPointer =
               ConstantExpr::getGetElementPtr(VTable->getType(), &GV, Idx);
           assert(AddressPointer->getType()->isPointerTy());
