@@ -248,7 +248,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
                                              RuntimePtr, Phi, "", BBs.back());
   BranchInst::Create(CI->getParent(), BBs.back());
   PHINode *ResultPhi =
-      PHINode::Create(PTy, 2, "", CI->getParent()->getFirstNonPHIOrDbg());
+      PHINode::Create(PTy, 2, "", &*CI->getParent()->begin());
   ResultPhi->addIncoming(Constant::getNullValue(PTy), BBs[BBs.size() - 3]);
   ResultPhi->addIncoming(DestPtr, BBs.back());
   CI->replaceAllUsesWith(ResultPhi);
