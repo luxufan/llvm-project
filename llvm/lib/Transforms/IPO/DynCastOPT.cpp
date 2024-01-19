@@ -7,6 +7,7 @@
 #define DEBUG_TYPE "dyncastopt"
 
 STATISTIC(NumOptDynCast, "Number of optimized dynamic_cast call site");
+STATISTIC(NumOptDynCastOffsetToTopMustZero, "Number of optimized dynamic_cast call site that has must zero offset to top value");
 
 namespace llvm {
 
@@ -198,6 +199,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     RuntimePtr = GetElementPtrInst::CreateInBounds(
         ByteType, StaticPtr, OffsetToTop, "runtime_object", LoadBlock);
   } else {
+    NumOptDynCastOffsetToTopMustZero++;
     RuntimePtr = StaticPtr;
   }
 
