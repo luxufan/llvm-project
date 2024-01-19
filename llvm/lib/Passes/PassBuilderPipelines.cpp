@@ -1707,9 +1707,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
   }
 
-  if (EnableDynamicCastOPT)
-    MPM.addPass(DynCastOPTPass());
-
   // Try to run OpenMP optimizations, quick no-op if no OpenMP metadata present.
   MPM.addPass(OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink));
 
@@ -1803,6 +1800,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(PeepholeFPM),
                                                 PTO.EagerlyInvalidateAnalyses));
+
+  if (EnableDynamicCastOPT)
+    MPM.addPass(DynCastOPTPass());
 
   // Note: historically, the PruneEH pass was run first to deduce nounwind and
   // generally clean up exception handling overhead. It isn't clear this is
