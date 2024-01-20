@@ -35,7 +35,7 @@ private:
   bool isUniqueBaseInFullCHA(const Value *Base);
   bool isUniqueBaseForSuper(const Value *Base, const Value *Super);
 
-  bool hasPrevailingVTables(const SetVector<const Value *> &RTTIs);
+  bool hasPrevailingVTables(const Value *RTTIs);
 
   // Get all of the super classes of Base, also include itself.
   void getSuperClasses(const Value *Base, SetVector<const Value *> &Supers);

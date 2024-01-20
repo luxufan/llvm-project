@@ -137,10 +137,8 @@ bool DynCastOPTPass::isUniqueBaseForSuper(const Value *Base,
   return ReachCount < 2;
 }
 
-bool DynCastOPTPass::hasPrevailingVTables(const SetVector<const Value *> &RTTIs) {
-  return all_of(RTTIs, [this](const Value *RTTI) {
-    return VTables.contains(RTTI);
-  });
+bool DynCastOPTPass::hasPrevailingVTables(const Value *RTTI) {
+  return VTables.contains(RTTI);
 }
 
 Value *DynCastOPTPass::loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB, unsigned AddressSpace) {
@@ -188,8 +186,9 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   // then the optimization can not be performed.
   // TODO: don't eliminate virtual table global variable in compilation if
   // -flto is enabled.
-  if (!hasPrevailingVTables(Supers))
-    return false;
+  Supers.remove_if([this](const Value *RTTI) {
+    return !this->hasPrevailingVTables(RTTI);
+  });
 
   // FIXME: Reduce super classes by judge if there is prevailing virtual tables is wrong.
   // Although no prevailing virtual tables means there is no allocation site for corresponding
