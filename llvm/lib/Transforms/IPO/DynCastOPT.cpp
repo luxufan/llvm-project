@@ -240,7 +240,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   CI->getParent()->replaceUsesWithIf(
       LoadBlock, [](Use &U) { return isa<Instruction>(U.getUser()) && cast<Instruction>(U.getUser())->isTerminator(); });
 
-  Value *RuntimeVPtr = new LoadInst(PTy, RuntimePtr, "runtime_vptr", LoadBlock);
+  Value *RuntimeVPtr = IRBLoadB.CreateLoad(PTy, RuntimePtr, "runtime_vptr");
   SmallVector<BasicBlock *> BBs;
   for (unsigned I = 0; I < Supers.size(); I++) {
     BBs.push_back(BasicBlock::Create(CI->getContext(),
