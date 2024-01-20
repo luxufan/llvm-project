@@ -3,6 +3,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/IRBuilder.h"
 
 #define DEBUG_TYPE "dyncastopt"
 
@@ -185,19 +186,22 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   BasicBlock *LoadBlock = BasicBlock::Create(
       CI->getContext(), "load_block", CI->getFunction(), CI->getParent());
 
+  IRBuilder<> IRBLoadB(LoadBlock);
+
   Value *RuntimePtr;
   if (!isOffsetToTopMustZero(Supers)) {
   // offset-to-top is always placed in vptr - 16. FIXME: -16 is incorrect for 32
   // bit address space.
-    Value *VPtr = new LoadInst(PTy, StaticPtr, "vptr", LoadBlock);
+    Value *VPtr = IRBLoadB.CreateLoad(PTy, StaticPtr, "vptr");
     Type *ByteType = Type::getInt8Ty(Context);
     Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), -16);
-    Value *AddrOffsetToTop = GetElementPtrInst::CreateInBounds(
-        ByteType, VPtr, Idx, "add_offset_to_top", LoadBlock);
-    Value *OffsetToTop = new LoadInst(Type::getInt64Ty(Context), AddrOffsetToTop,
-                                    "offset_to_top", LoadBlock);
-    RuntimePtr = GetElementPtrInst::CreateInBounds(
-        ByteType, StaticPtr, OffsetToTop, "runtime_object", LoadBlock);
+    Value *AddrOffsetToTop = IRBLoadB.CreateInBoundsGEP(ByteType, VPtr, Idx, "add_offset_to_top");
+
+
+    Value *OffsetToTop = IRBLoadB.CreateLoad(Type::getInt64Ty(Context), AddrOffsetToTop,
+                                    "offset_to_top");
+    RuntimePtr = IRBLoadB.CreateInBoundsGEP(
+        ByteType, StaticPtr, OffsetToTop, "runtime_object");
   } else {
     NumOptDynCastOffsetToTopMustZero++;
     RuntimePtr = StaticPtr;
