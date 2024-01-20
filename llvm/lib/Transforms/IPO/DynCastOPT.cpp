@@ -162,11 +162,18 @@ Value *DynCastOPTPass::loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB, unsign
 }
 
 bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
+  Value *StaticPtr = CI->getArgOperand(0);
+  if (isa<ConstantPointerNull>(StaticPtr)) {
+    CI->replaceAllUsesWith(StaticPtr);
+    return true;
+  }
+  if (!CI->getFunction()->isInternalLinkage(CI->getFunction()->getLinkage()))
+    return false;
+
   LLVMContext &Context = CI->getContext();
   Function *Called = CI->getCalledFunction();
   assert(Called->hasName() && Called->getName() == "__dynamic_cast");
   Value *DestType = CI->getArgOperand(2);
-  Value *StaticPtr = CI->getArgOperand(0);
 
   Type *PTy =
       PointerType::get(CI->getContext(), CI->getFunction()->getAddressSpace());
@@ -342,8 +349,6 @@ PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {
   collectVirtualTables(M);
   SmallVector<CallInst *> Deleted;
   for (Function &F : M.functions()) {
-    if (!F.isInternalLinkage(F.getLinkage()))
-      continue;
     for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
         if (CallInst *CI = dyn_cast<CallInst>(&I)) {
