@@ -10,8 +10,13 @@
 STATISTIC(NumOptDynCast, "Number of optimized dynamic_cast call site");
 STATISTIC(NumOptDynCastOffsetToTopMustZero, "Number of optimized dynamic_cast call site that has must zero offset to top value");
 
+
 namespace llvm {
 
+static cl::opt<unsigned> MaxSuperChecks(
+    "max-super-checks", cl::init(10), cl::Hidden, cl::value_desc("N"),
+    cl::desc("Only check supers with less or equal than N supers")
+);
 const int64_t VirtualMask = 1;
 const int64_t PublicMaks = 2;
 const int64_t ShiftToOffset = 8;
@@ -193,7 +198,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   // check for this class type.
 
 
-  if (Supers.size() > 2)
+  if (Supers.size() > MaxSuperChecks)
     return false;
 
   if (Supers.empty()) {
