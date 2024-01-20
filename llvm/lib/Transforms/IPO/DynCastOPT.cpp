@@ -138,6 +138,24 @@ bool DynCastOPTPass::hasPrevailingVTables(const SetVector<const Value *> &RTTIs)
   });
 }
 
+Value *DynCastOPTPass::loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB, unsigned AddressSpace) {
+  LLVMContext &Context = IRB.getContext();
+  Type *PTy =
+      PointerType::get(IRB.getContext(), AddressSpace);
+  // offset-to-top is always placed in vptr - 16. FIXME: -16 is incorrect for 32
+  // bit address space.
+    Value *VPtr = IRB.CreateLoad(PTy, StaticPtr, "vptr");
+    Type *ByteType = Type::getInt8Ty(Context);
+    Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), -16);
+    Value *AddrOffsetToTop = IRB.CreateInBoundsGEP(ByteType, VPtr, Idx, "add_offset_to_top");
+
+
+    Value *OffsetToTop = IRB.CreateLoad(Type::getInt64Ty(Context), AddrOffsetToTop,
+                                    "offset_to_top");
+    return IRB.CreateInBoundsGEP(
+        ByteType, StaticPtr, OffsetToTop, "runtime_object");
+}
+
 bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   LLVMContext &Context = CI->getContext();
   Function *Called = CI->getCalledFunction();
@@ -192,16 +210,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   if (!isOffsetToTopMustZero(Supers)) {
   // offset-to-top is always placed in vptr - 16. FIXME: -16 is incorrect for 32
   // bit address space.
-    Value *VPtr = IRBLoadB.CreateLoad(PTy, StaticPtr, "vptr");
-    Type *ByteType = Type::getInt8Ty(Context);
-    Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), -16);
-    Value *AddrOffsetToTop = IRBLoadB.CreateInBoundsGEP(ByteType, VPtr, Idx, "add_offset_to_top");
-
-
-    Value *OffsetToTop = IRBLoadB.CreateLoad(Type::getInt64Ty(Context), AddrOffsetToTop,
-                                    "offset_to_top");
-    RuntimePtr = IRBLoadB.CreateInBoundsGEP(
-        ByteType, StaticPtr, OffsetToTop, "runtime_object");
+    RuntimePtr = loadRuntimePtr(StaticPtr, IRBLoadB, CI->getFunction()->getAddressSpace());
   } else {
     NumOptDynCastOffsetToTopMustZero++;
     RuntimePtr = StaticPtr;

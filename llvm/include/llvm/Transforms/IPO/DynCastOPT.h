@@ -7,6 +7,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
 
@@ -46,6 +47,8 @@ private:
 
   // Invalidate the class hierarchy analysis if a class is not internal
   void invalidateExternalClass(const GlobalVariable *RTTI);
+
+  Value *loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB, unsigned AddressSpace);
 
   bool invalidToOptimize(const Value *RTTI) const {
     return Invalid.contains(RTTI);
