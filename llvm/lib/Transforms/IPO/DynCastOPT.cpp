@@ -216,6 +216,18 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     RuntimePtr = StaticPtr;
   }
 
+  SmallVector<Instruction *> ToMove;
+  for (auto &Phi : CI->getParent()->phis())
+    ToMove.push_back(&Phi);
+  for_each(ToMove, [LoadBlock](Instruction *Phi){
+    Phi->moveBefore(*LoadBlock, LoadBlock->getFirstInsertionPt());
+  });
+
+  // Replace all of the branch to dynamic_cast.not_null to the first check
+  // block. Only replace branch since replacing Phi node is incorrect.
+  CI->getParent()->replaceUsesWithIf(
+      LoadBlock, [](Use &U) { return isa<Instruction>(U.getUser()) && cast<Instruction>(U.getUser())->isTerminator(); });
+
   Value *RuntimeVPtr = new LoadInst(PTy, RuntimePtr, "runtime_vptr", LoadBlock);
   SmallVector<BasicBlock *> BBs;
   for (unsigned I = 0; I < Supers.size(); I++) {
@@ -234,17 +246,6 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   PHINode *Phi =
       PHINode::Create(Type::getInt64Ty(Context), Supers.size(), "", BBs.back());
 
-  SmallVector<Instruction *> ToMove;
-  for (auto &Phi : CI->getParent()->phis())
-    ToMove.push_back(&Phi);
-  for_each(ToMove, [LoadBlock](Instruction *Phi){
-    Phi->moveBefore(*LoadBlock, LoadBlock->getFirstInsertionPt());
-  });
-
-  // Replace all of the branch to dynamic_cast.not_null to the first check
-  // block. Only replace branch since replacing Phi node is incorrect.
-  CI->getParent()->replaceUsesWithIf(
-      LoadBlock, [](Use &U) { return isa<Instruction>(U.getUser()) && cast<Instruction>(U.getUser())->isTerminator(); });
 
   BranchInst::Create(BBs[0], LoadBlock);
 
