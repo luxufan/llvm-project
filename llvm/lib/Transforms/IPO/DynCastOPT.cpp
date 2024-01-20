@@ -177,12 +177,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   Type *PTy =
       PointerType::get(CI->getContext(), CI->getFunction()->getAddressSpace());
-  // TODO: Split block to enable optimization for case that
-  // static ptr and __dynamic_cast are in the same block
-  if (auto *I = dyn_cast<Instruction>(StaticPtr)) {
-    if (I->getParent() == CI->getParent())
-      return false;
-  }
+
   if (invalidToOptimize(DestType) || !isUniqueBaseInFullCHA(DestType))
     return false;
 
@@ -213,10 +208,15 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     return true;
   }
 
-  BasicBlock *LoadBlock = BasicBlock::Create(
-      CI->getContext(), "load_block", CI->getFunction(), CI->getParent());
 
+  BasicBlock *LoadBlock = CI->getParent()->splitBasicBlock(CI, "load_block", /* Before */true);
+
+  Instruction *LBTerm = LoadBlock->getTerminator();
+  assert(isa<BranchInst>(LBTerm));
+  BranchInst *BrOfLB = dyn_cast<BranchInst>(LBTerm);
+  assert(BrOfLB->isUnconditional());
   IRBuilder<> IRBLoadB(LoadBlock);
+  IRBLoadB.SetInsertPoint(BrOfLB);
 
   Value *RuntimePtr;
   if (!isOffsetToTopMustZero(Supers)) {
@@ -227,18 +227,6 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     NumOptDynCastOffsetToTopMustZero++;
     RuntimePtr = StaticPtr;
   }
-
-  SmallVector<Instruction *> ToMove;
-  for (auto &Phi : CI->getParent()->phis())
-    ToMove.push_back(&Phi);
-  for_each(ToMove, [LoadBlock](Instruction *Phi){
-    Phi->moveBefore(*LoadBlock, LoadBlock->getFirstInsertionPt());
-  });
-
-  // Replace all of the branch to dynamic_cast.not_null to the first check
-  // block. Only replace branch since replacing Phi node is incorrect.
-  CI->getParent()->replaceUsesWithIf(
-      LoadBlock, [](Use &U) { return isa<Instruction>(U.getUser()) && cast<Instruction>(U.getUser())->isTerminator(); });
 
   Value *RuntimeVPtr = IRBLoadB.CreateLoad(PTy, RuntimePtr, "runtime_vptr");
   SmallVector<BasicBlock *> BBs;
@@ -258,8 +246,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   PHINode *Phi =
       PHINode::Create(Type::getInt64Ty(Context), Supers.size(), "", BBs.back());
 
-
-  BranchInst::Create(BBs[0], LoadBlock);
+  BrOfLB->setSuccessor(0, BBs[0]);
 
   SmallVector<const Value *> SupersVector;
   for (const Value *Super : Supers) {
