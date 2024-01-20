@@ -157,3 +157,69 @@ dynamic_cast.end:                                 ; preds = %entry, %dynamic_cas
   %2 = phi ptr [ %1, %dynamic_cast.notnull ], [ null, %entry ]
   ret ptr %2
 }
+
+define internal ptr @source_ptr_is_null(ptr %a) {
+; CHECK-LABEL: define internal ptr @source_ptr_is_null(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    br i1 [[TMP0]], label [[DYNAMIC_CAST_END:%.*]], label [[LOAD_BLOCK:%.*]]
+; CHECK:       load_block:
+; CHECK-NEXT:    [[VPTR:%.*]] = load ptr, ptr null, align 8
+; CHECK-NEXT:    [[ADD_OFFSET_TO_TOP:%.*]] = getelementptr inbounds i8, ptr [[VPTR]], i64 -16
+; CHECK-NEXT:    [[OFFSET_TO_TOP:%.*]] = load i64, ptr [[ADD_OFFSET_TO_TOP]], align 8
+; CHECK-NEXT:    [[RUNTIME_OBJECT:%.*]] = getelementptr inbounds i8, ptr null, i64 [[OFFSET_TO_TOP]]
+; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
+; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
+; CHECK:       check_super.0:
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1C, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
+; CHECK:       handle_offset:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[CHECK_SUPER_0]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP2]]
+; CHECK-NEXT:    br label [[DYNAMIC_CAST_NOTNULL]]
+; CHECK:       dynamic_cast.notnull:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ [[TMP3]], [[HANDLE_OFFSET]] ]
+; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
+; CHECK:       dynamic_cast.end:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi ptr [ [[TMP4]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[TMP5]]
+;
+entry:
+  %0 = icmp eq ptr %a, null
+  br i1 %0, label %dynamic_cast.end, label %dynamic_cast.notnull
+
+dynamic_cast.notnull:                             ; preds = %entry
+  %1 = tail call ptr @__dynamic_cast(ptr null, ptr nonnull @_ZTI1A, ptr nonnull @_ZTI1C, i64 -3) #7
+  br label %dynamic_cast.end
+
+dynamic_cast.end:                                 ; preds = %entry, %dynamic_cast.notnull
+  %2 = phi ptr [ %1, %dynamic_cast.notnull ], [ null, %entry ]
+  ret ptr %2
+}
+
+define ptr @external_source_ptr_is_null(ptr %a) {
+; CHECK-LABEL: define ptr @external_source_ptr_is_null(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    br i1 [[TMP0]], label [[DYNAMIC_CAST_END:%.*]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
+; CHECK:       dynamic_cast.notnull:
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @__dynamic_cast(ptr null, ptr nonnull @_ZTI1A, ptr nonnull @_ZTI1C, i64 -3)
+; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
+; CHECK:       dynamic_cast.end:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[TMP1]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[TMP2]]
+;
+entry:
+  %0 = icmp eq ptr %a, null
+  br i1 %0, label %dynamic_cast.end, label %dynamic_cast.notnull
+
+dynamic_cast.notnull:                             ; preds = %entry
+  %1 = tail call ptr @__dynamic_cast(ptr null, ptr nonnull @_ZTI1A, ptr nonnull @_ZTI1C, i64 -3) #7
+  br label %dynamic_cast.end
+
+dynamic_cast.end:                                 ; preds = %entry, %dynamic_cast.notnull
+  %2 = phi ptr [ %1, %dynamic_cast.notnull ], [ null, %entry ]
+  ret ptr %2
+}
