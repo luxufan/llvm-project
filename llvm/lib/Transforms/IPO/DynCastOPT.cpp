@@ -11,8 +11,7 @@ STATISTIC(NumOptDynCast, "Number of optimized dynamic_cast call site");
 STATISTIC(NumDynCast, "Number of dynamic_cast call site");
 STATISTIC(NumOptDynCastOffsetToTopMustZero, "Number of optimized dynamic_cast call site that has must zero offset to top value");
 
-
-namespace llvm {
+using namespace llvm;
 
 static cl::opt<unsigned> MaxSuperChecks(
     "max-super-checks", cl::init(10), cl::Hidden, cl::value_desc("N"),
@@ -295,27 +294,54 @@ int64_t DynCastOPTPass::computeOffset(const Value *Base, const Value *Super) {
   llvm_unreachable("Base is not a base of super");
 }
 
+
+static Value *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA, Constant *VTableInit, SmallVectorImpl<Constant *> &Idxs) {
+  // With -fwhole-program-vtables, globalsplit pass may split the struct type
+  // to array type. For example:
+  //@_ZTVZN6recfun3def12contains_defERNS_4utilEP4exprE10def_find_p.0
+  //  = internal constant { [5 x ptr] } { [ptr null, ...] }, !type !795, !type !799
+  //
+  //optimized to:
+  //
+  //@_ZTVZN6recfun3def12contains_defERNS_4utilEP4exprE10def_find_p.0
+  //  = internal constant [5 x ptr] [ptr null, ...], !type !795, !type !799
+  //
+  if (ConstantStruct *VPtrStruct = dyn_cast<ConstantStruct>(VTableInit)) {
+    Idxs.push_back(ConstantInt::get(Type::getInt32Ty(VTableInit->getContext()), 0));
+    if (VPtrStruct->getNumOperands() == 0)
+      return nullptr;
+    VTableInit = VPtrStruct->getOperand(0);
+  }
+
+  if (ConstantArray *VPtrArray = dyn_cast<ConstantArray>(VTableInit)) {
+    if (!VPtrArray->getType()->getElementType()->isPointerTy()) {
+      return nullptr;
+    }
+
+    uint64_t Offset = 0;
+    for (Value *Entry : VPtrArray->operand_values()) {
+      Offset += 1;
+      if (CHA.contains(Entry)) {
+        Idxs.push_back(ConstantInt::get(Type::getInt64Ty(VTableInit->getContext()), Offset));
+        return Entry;
+      }
+    }
+
+  }
+  return nullptr;
+}
+
+
 void DynCastOPTPass::collectVirtualTables(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     if (GV.hasName() && GV.getName().starts_with("_ZTV") &&
         GV.hasInitializer()) {
-      ConstantStruct *VTable = cast<ConstantStruct>(GV.getInitializer());
-      ConstantArray *SubTable = cast<ConstantArray>(VTable->getOperand(0));
-      uint64_t Offset = 0;
-      for (Value *Element : SubTable->operand_values()) {
-        Offset += 1;
-        if (CHA.contains(Element)) {
-          Constant *Idx[] = {
-              ConstantInt::get(Type::getInt32Ty(M.getContext()), 0),
-              ConstantInt::get(Type::getInt32Ty(M.getContext()), 0),
-              ConstantInt::get(Type::getInt64Ty(M.getContext()), Offset)};
-
-          Constant *AddressPointer =
-              ConstantExpr::getGetElementPtr(VTable->getType(), &GV, Idx);
-          assert(AddressPointer->getType()->isPointerTy());
-          VTables.insert(std::make_pair(Element, AddressPointer));
-          break;
-        }
+      SmallVector<Constant *> Idxs;
+      Idxs.push_back(ConstantInt::get(Type::getInt32Ty(M.getContext()), 0));
+      if (Value *RTTI = getIndexesToAddressPoint(CHA, GV.getInitializer(), Idxs)) {
+        Constant *AddressPointer =
+          ConstantExpr::getGetElementPtr(GV.getInitializer()->getType(), &GV, Idxs);
+        VTables.insert(std::make_pair(RTTI, AddressPointer));
       }
     }
   }
@@ -356,4 +382,3 @@ PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {
   return PreservedAnalyses::none();
 }
 
-} // namespace llvm

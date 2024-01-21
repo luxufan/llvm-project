@@ -13,11 +13,13 @@ namespace llvm {
 
 class DynCastOPTPass : public PassInfoMixin<DynCastOPTPass> {
   using BaseClass = std::pair<const Value *, int64_t>;
+public:
+  using CHAMapType = DenseMap<const Value *, SmallVector<BaseClass, 2>>;
 
 private:
   // Map from class to its base classes and offset pair
   // Value * is the pointer of RTTI descriptor
-  DenseMap<const Value *, SmallVector<BaseClass, 2>> CHA;
+  CHAMapType CHA;
 
   // Map from class to its super classes
   // Value * is the pointer of RTTI descriptor
