@@ -48,7 +48,9 @@ private:
   int64_t computeOffset(const Value *Base, const Value *Super);
 
   // Invalidate the class hierarchy analysis if a class is not internal
-  void invalidateExternalClass(const GlobalVariable *RTTI);
+  void invalidateExternalClass();
+
+  void recordExternalClass(const GlobalVariable *RTTI);
 
   Value *loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB, unsigned AddressSpace);
 

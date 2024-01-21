@@ -21,11 +21,12 @@ const int64_t VirtualMask = 1;
 const int64_t PublicMaks = 2;
 const int64_t ShiftToOffset = 8;
 
-void DynCastOPTPass::invalidateExternalClass(const GlobalVariable *RTTI) {
-  assert(!RTTI->isInternalLinkage(RTTI->getLinkage()) &&
-         "This is a internal class");
+void DynCastOPTPass::invalidateExternalClass() {
   SmallVector<const Value *> WorkList;
-  WorkList.push_back(RTTI);
+  for_each(Invalid, [&WorkList](const Value *V) {
+    WorkList.push_back(V);
+  });
+
   while (!WorkList.empty()) {
     const Value *Current = WorkList.pop_back_val();
     if (CHA.contains(Current)) {
@@ -34,6 +35,13 @@ void DynCastOPTPass::invalidateExternalClass(const GlobalVariable *RTTI) {
     }
     Invalid.insert(Current);
   }
+
+}
+
+void DynCastOPTPass::recordExternalClass(const GlobalVariable *RTTI) {
+  assert(!RTTI->isInternalLinkage(RTTI->getLinkage()) &&
+         "This is a internal class");
+  Invalid.insert(RTTI);
 }
 
 void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
@@ -73,9 +81,10 @@ void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
         assert(false && "Initializer is not a constant struct");
       }
       if (!GV.isInternalLinkage(GV.getLinkage()))
-        invalidateExternalClass(&GV);
+        recordExternalClass(&GV);
     }
   }
+  invalidateExternalClass();
 }
 
 void DynCastOPTPass::getMostDerivedClasses(
