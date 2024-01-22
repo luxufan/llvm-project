@@ -2,17 +2,18 @@
 #define LLVM_TRANSFORMS_IPO_DYNCASTOPT_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
 class DynCastOPTPass : public PassInfoMixin<DynCastOPTPass> {
   using BaseClass = std::pair<const Value *, int64_t>;
+
 public:
   using CHAMapType = DenseMap<const Value *, SmallVector<BaseClass, 2>>;
 
@@ -52,7 +53,8 @@ private:
 
   void recordExternalClass(const GlobalVariable *RTTI);
 
-  Value *loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB, unsigned AddressSpace);
+  Value *loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB,
+                        unsigned AddressSpace);
 
   bool invalidToOptimize(const Value *RTTI) const {
     return Invalid.contains(RTTI);
