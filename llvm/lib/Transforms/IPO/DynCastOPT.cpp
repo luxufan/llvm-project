@@ -169,6 +169,8 @@ Value *DynCastOPTPass::loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB,
 bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   NumDynCast++;
   Value *StaticPtr = CI->getArgOperand(0);
+  ConstantInt *Src2DstHint = cast<ConstantInt>(CI->getArgOperand(3));
+
   if (isa<ConstantPointerNull>(StaticPtr)) {
     CI->replaceAllUsesWith(StaticPtr);
     return true;
@@ -189,6 +191,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   SetVector<const Value *> Supers;
   getSuperClasses(DestType, Supers);
+  bool IsOffsetToTopMustZero = Src2DstHint->getSExtValue() == 0 && isOffsetToTopMustZero(Supers);
 
   // If not all super classes have the prevailing vritual table definition,
   // then the optimization can not be performed.
@@ -225,7 +228,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   IRBLoadB.SetInsertPoint(BrOfLB);
 
   Value *RuntimePtr;
-  if (!isOffsetToTopMustZero(Supers)) {
+  if (!IsOffsetToTopMustZero) {
     // offset-to-top is always placed in vptr - 16. FIXME: -16 is incorrect for
     // 32 bit address space.
     RuntimePtr = loadRuntimePtr(StaticPtr, IRBLoadB,
