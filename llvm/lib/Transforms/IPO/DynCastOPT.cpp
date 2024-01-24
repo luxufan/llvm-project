@@ -24,7 +24,7 @@ const int64_t ShiftToOffset = 8;
 
 void DynCastOPTPass::invalidateExternalClass() {
   SmallVector<const Value *> WorkList;
-  for_each(Invalid, [&WorkList](const Value *V) { WorkList.push_back(V); });
+  for_each(ExternalLinkageRTTIs, [&WorkList](const Value *V) { WorkList.push_back(V); });
 
   while (!WorkList.empty()) {
     const Value *Current = WorkList.pop_back_val();
@@ -32,14 +32,14 @@ void DynCastOPTPass::invalidateExternalClass() {
       for (auto &Base : CHA[Current])
         WorkList.push_back(Base.first);
     }
-    Invalid.insert(Current);
+    Invalids.insert(Current);
   }
 }
 
 void DynCastOPTPass::recordExternalClass(const GlobalVariable *RTTI) {
   assert(!RTTI->isInternalLinkage(RTTI->getLinkage()) &&
          "This is a internal class");
-  Invalid.insert(RTTI);
+  ExternalLinkageRTTIs.insert(RTTI);
 }
 
 void DynCastOPTPass::buildTypeInfoGraph(Module &M) {

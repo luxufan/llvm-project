@@ -31,7 +31,10 @@ private:
   DenseMap<const Value *, Constant *> VTables;
 
   // dynamic_cast to these classes can not be optimized.
-  SetVector<const Value *> Invalid;
+  SetVector<const Value *> Invalids;
+
+  // RTTIs that has external linkage.
+  SetVector<const Value *> ExternalLinkageRTTIs;
 
   void buildTypeInfoGraph(Module &M);
   void collectVirtualTables(Module &M);
@@ -57,7 +60,7 @@ private:
                         unsigned AddressSpace);
 
   bool invalidToOptimize(const Value *RTTI) const {
-    return Invalid.contains(RTTI);
+    return Invalids.contains(RTTI);
   }
 
   bool isOffsetToTopMustZero(SetVector<const Value *> &SuperClasses);
