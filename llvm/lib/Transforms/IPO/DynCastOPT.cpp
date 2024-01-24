@@ -34,6 +34,17 @@ void DynCastOPTPass::invalidateExternalClass() {
     }
     Invalids.insert(Current);
   }
+
+  WorkList.clear();
+  for_each(ExternalReferenceRTTIs, [&WorkList](const Value *V) { WorkList.push_back(V); });
+  while (!WorkList.empty()) {
+    const Value *Current = WorkList.pop_back_val();
+    if (SuperClasses.contains(Current)) {
+      for (auto *Super : SuperClasses[Current])
+        WorkList.push_back(Super);
+    }
+    Invalids.insert(Current);
+  }
 }
 
 void DynCastOPTPass::recordExternalClass(const GlobalVariable *RTTI) {
@@ -44,8 +55,12 @@ void DynCastOPTPass::recordExternalClass(const GlobalVariable *RTTI) {
 
 void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
-    if (GV.hasName() && GV.getName().starts_with("_ZTI") &&
-        GV.hasInitializer()) {
+    if (GV.hasName() && GV.getName().starts_with("_ZTI")) {
+      if (!GV.hasInitializer()) {
+        if (GV.isExternalLinkage(GV.getLinkage()))
+          ExternalReferenceRTTIs.insert(&GV);
+        continue;
+      }
       if (ConstantStruct *Initializer =
               dyn_cast<ConstantStruct>(GV.getInitializer())) {
         // __class_type_info has type { ptr, ptr }

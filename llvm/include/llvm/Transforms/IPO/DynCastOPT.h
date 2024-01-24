@@ -36,6 +36,9 @@ private:
   // RTTIs that has external linkage.
   SetVector<const Value *> ExternalLinkageRTTIs;
 
+  // RTTIs that are external references.
+  SetVector<const Value *> ExternalReferenceRTTIs;
+
   void buildTypeInfoGraph(Module &M);
   void collectVirtualTables(Module &M);
   bool isUniqueBaseInFullCHA(const Value *Base);
