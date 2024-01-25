@@ -275,18 +275,14 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   BrOfLB->setSuccessor(0, BBs[0]);
 
-  SmallVector<GUID> SupersVector;
-  for (GUID Super : Supers) {
-    SupersVector.push_back(Super);
-  }
-  for (unsigned I = 0; I < SupersVector.size(); I++) {
-    assert(VTables.contains(SupersVector[I]));
+  for (unsigned I = 0; I < Supers.size(); I++) {
+    assert(VTables.contains(Supers[I]));
     Value *Result =
         CmpInst::Create(Instruction::ICmp, ICmpInst::Predicate::ICMP_EQ,
-                        RuntimeVPtr, VTables[SupersVector[I]], "", BBs[I]);
+                        RuntimeVPtr, VTables[Supers[I]], "", BBs[I]);
     BranchInst::Create(BBs.back(), BBs[I + 1], Result, BBs[I]);
     Phi->addIncoming(ConstantInt::get(Type::getInt64Ty(Context),
-                                      computeOffset(DestGUID, SupersVector[I])),
+                                      computeOffset(DestGUID, Supers[I])),
                      BBs[I]);
   }
 
