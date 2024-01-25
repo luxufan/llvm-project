@@ -23,11 +23,12 @@ const int64_t PublicMaks = 2;
 const int64_t ShiftToOffset = 8;
 
 void DynCastOPTPass::invalidateExternalClass() {
-  SmallVector<const Value *> WorkList;
-  for_each(ExternalLinkageRTTIs, [&WorkList](const Value *V) { WorkList.push_back(V); });
+  SmallVector<GUID> WorkList;
+  for_each(ExternalLinkageRTTIs,
+           [&WorkList](GUID V) { WorkList.push_back(V); });
 
   while (!WorkList.empty()) {
-    const Value *Current = WorkList.pop_back_val();
+    GUID Current = WorkList.pop_back_val();
     if (CHA.contains(Current)) {
       for (auto &Base : CHA[Current])
         WorkList.push_back(Base.first);
@@ -36,11 +37,12 @@ void DynCastOPTPass::invalidateExternalClass() {
   }
 
   WorkList.clear();
-  for_each(ExternalReferenceRTTIs, [&WorkList](const Value *V) { WorkList.push_back(V); });
+  for_each(ExternalReferenceRTTIs,
+           [&WorkList](GUID V) { WorkList.push_back(V); });
   while (!WorkList.empty()) {
-    const Value *Current = WorkList.pop_back_val();
+    GUID Current = WorkList.pop_back_val();
     if (SuperClasses.contains(Current)) {
-      for (auto *Super : SuperClasses[Current])
+      for (auto Super : SuperClasses[Current])
         WorkList.push_back(Super);
     }
     Invalids.insert(Current);
@@ -50,15 +52,16 @@ void DynCastOPTPass::invalidateExternalClass() {
 void DynCastOPTPass::recordExternalClass(const GlobalVariable *RTTI) {
   assert(!RTTI->isInternalLinkage(RTTI->getLinkage()) &&
          "This is a internal class");
-  ExternalLinkageRTTIs.insert(RTTI);
+  ExternalLinkageRTTIs.insert(GlobalValue::getGUID(RTTI->getName()));
 }
 
 void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     if (GV.hasName() && GV.getName().starts_with("_ZTI")) {
+      GUID TypeGUID = GlobalValue::getGUID(GV.getName());
       if (!GV.hasInitializer()) {
         if (GV.isExternalLinkage(GV.getLinkage()))
-          ExternalReferenceRTTIs.insert(&GV);
+          ExternalReferenceRTTIs.insert(TypeGUID);
         continue;
       }
       if (ConstantStruct *Initializer =
@@ -67,11 +70,12 @@ void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
         // __si_class_type_info has type { ptr, ptr, ptr }
         // __vmi_class_type_info has type { ptr, ptr, i32, i32, ptr, i64 ... }
         if (Initializer->getNumOperands() == 2) {
-          CHA.getOrInsertDefault(cast<Value>(&GV));
+          CHA.getOrInsertDefault(TypeGUID);
         } else if (Initializer->getNumOperands() == 3) {
           Value *Base = Initializer->getOperand(2);
-          CHA[&GV].push_back(std::make_pair(Base, 0));
-          SuperClasses[Base].push_back(&GV);
+          GUID BaseGUID = GlobalValue::getGUID(Base->getName());
+          CHA[TypeGUID].push_back(std::make_pair(BaseGUID, 0));
+          SuperClasses[BaseGUID].push_back(TypeGUID);
         } else if (Initializer->getNumOperands() > 4) {
           unsigned NumBase =
               cast<ConstantInt>(Initializer->getOperand(3))->getZExtValue();
@@ -80,14 +84,15 @@ void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
                 cast<ConstantInt>(Initializer->getOperand(I * 2 + 5))
                     ->getSExtValue();
             Value *Base = Initializer->getOperand(I * 2 + 4);
+            GUID BaseGUID = GlobalValue::getGUID(Base->getName());
             bool IsVirtual = OffsetFlag & (VirtualMask);
             assert(!IsVirtual && "Virtual inheritance");
             int64_t Offset = OffsetFlag >> ShiftToOffset;
             bool IsPublic = OffsetFlag & (PublicMaks);
             if (!IsPublic)
               continue;
-            CHA[cast<Value>(&GV)].push_back(std::make_pair(Base, Offset));
-            SuperClasses[Base].push_back(&GV);
+            CHA[TypeGUID].push_back(std::make_pair(BaseGUID, Offset));
+            SuperClasses[BaseGUID].push_back(TypeGUID);
           }
         }
       } else {
@@ -101,35 +106,34 @@ void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
 }
 
 void DynCastOPTPass::getMostDerivedClasses(
-    const Value *Base, SetVector<const Value *> &MostDerivedClasses) {
-  SetVector<const Value *> Supers;
+    GUID Base, SetVector<GUID> &MostDerivedClasses) {
+  SetVector<GUID> Supers;
   getSuperClasses(Base, Supers);
-  for (auto *Super : Supers) {
-    const SmallVector<const Value *> SuperSupers = SuperClasses[Super];
+  for (auto Super : Supers) {
+    const SmallVector<GUID> SuperSupers = SuperClasses[Super];
     if (SuperSupers.empty())
       MostDerivedClasses.insert(Super);
   }
 }
 
-void DynCastOPTPass::getSuperClasses(const Value *Class,
-                                     SetVector<const Value *> &Supers) {
-  SmallVector<const Value *> WorkList;
+void DynCastOPTPass::getSuperClasses(GUID Class, SetVector<GUID> &Supers) {
+  SmallVector<GUID> WorkList;
   Supers.insert(Class);
   WorkList.push_back(Class);
   while (!WorkList.empty()) {
-    const Value *V = WorkList.pop_back_val();
-    for (auto *Super : SuperClasses[V]) {
+    GUID V = WorkList.pop_back_val();
+    for (auto Super : SuperClasses[V]) {
       WorkList.push_back(Super);
       Supers.insert(Super);
     }
   }
 }
 
-bool DynCastOPTPass::isUniqueBaseInFullCHA(const Value *C) {
-  SetVector<const Value *> MostDerivedClasses;
+bool DynCastOPTPass::isUniqueBaseInFullCHA(GUID C) {
+  SetVector<GUID> MostDerivedClasses;
   getMostDerivedClasses(C, MostDerivedClasses);
 
-  for (const Value *Derived : MostDerivedClasses) {
+  for (auto Derived : MostDerivedClasses) {
     if (!isUniqueBaseForSuper(C, Derived))
       return false;
   }
@@ -137,18 +141,17 @@ bool DynCastOPTPass::isUniqueBaseInFullCHA(const Value *C) {
   return true;
 }
 
-bool DynCastOPTPass::isUniqueBaseForSuper(const Value *Base,
-                                          const Value *Super) {
+bool DynCastOPTPass::isUniqueBaseForSuper(GUID Base, GUID Super) {
   if (Base == Super)
     return true;
 
   unsigned ReachCount = 0;
-  SmallVector<const Value *> WorkList;
+  SmallVector<GUID> WorkList;
   WorkList.push_back(Super);
   while (!WorkList.empty()) {
-    const Value *Current = WorkList.pop_back_val();
+    GUID Current = WorkList.pop_back_val();
     for (const auto &BasePair : CHA[Current]) {
-      const Value *BaseP = BasePair.first;
+      GUID BaseP = BasePair.first;
       if (BaseP == Base)
         ReachCount++;
       else
@@ -159,7 +162,7 @@ bool DynCastOPTPass::isUniqueBaseForSuper(const Value *Base,
   return ReachCount < 2;
 }
 
-bool DynCastOPTPass::hasPrevailingVTables(const Value *RTTI) {
+bool DynCastOPTPass::hasPrevailingVTables(GUID RTTI) {
   return VTables.contains(RTTI);
 }
 
@@ -197,15 +200,16 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   Function *Called = CI->getCalledFunction();
   assert(Called->hasName() && Called->getName() == "__dynamic_cast");
   Value *DestType = CI->getArgOperand(2);
+  GUID DestGUID = GlobalValue::getGUID(DestType->getName());
 
   Type *PTy =
       PointerType::get(CI->getContext(), CI->getFunction()->getAddressSpace());
 
-  if (invalidToOptimize(DestType) || !isUniqueBaseInFullCHA(DestType))
+  if (invalidToOptimize(DestGUID) || !isUniqueBaseInFullCHA(DestGUID))
     return false;
 
-  SetVector<const Value *> Supers;
-  getSuperClasses(DestType, Supers);
+  SetVector<GUID> Supers;
+  getSuperClasses(DestGUID, Supers);
   bool IsOffsetToTopMustZero = Src2DstHint->getSExtValue() == 0 && isOffsetToTopMustZero(Supers);
 
   // If not all super classes have the prevailing vritual table definition,
@@ -213,7 +217,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   // TODO: don't eliminate virtual table global variable in compilation if
   // -flto is enabled.
   Supers.remove_if(
-      [this](const Value *RTTI) { return !this->hasPrevailingVTables(RTTI); });
+      [this](GUID RTTI) { return !this->hasPrevailingVTables(RTTI); });
 
   // FIXME: Reduce super classes by judge if there is prevailing virtual tables
   // is wrong. Although no prevailing virtual tables means there is no
@@ -273,8 +277,8 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   BrOfLB->setSuccessor(0, BBs[0]);
 
-  SmallVector<const Value *> SupersVector;
-  for (const Value *Super : Supers) {
+  SmallVector<GUID> SupersVector;
+  for (GUID Super : Supers) {
     SupersVector.push_back(Super);
   }
   for (unsigned I = 0; I < SupersVector.size(); I++) {
@@ -284,7 +288,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
                         RuntimeVPtr, VTables[SupersVector[I]], "", BBs[I]);
     BranchInst::Create(BBs.back(), BBs[I + 1], Result, BBs[I]);
     Phi->addIncoming(ConstantInt::get(Type::getInt64Ty(Context),
-                                      computeOffset(DestType, SupersVector[I])),
+                                      computeOffset(DestGUID, SupersVector[I])),
                      BBs[I]);
   }
 
@@ -299,11 +303,11 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   return true;
 }
 
-int64_t DynCastOPTPass::computeOffset(const Value *Base, const Value *Super) {
+int64_t DynCastOPTPass::computeOffset(GUID Base, GUID Super) {
   assert(isUniqueBaseForSuper(Base, Super));
   if (Base == Super)
     return 0;
-  using BaseOffsetPair = std::pair<const Value *, int64_t>;
+  using BaseOffsetPair = std::pair<GUID, int64_t>;
   SmallVector<BaseOffsetPair> WorkList;
   WorkList.push_back(std::make_pair(Super, 0));
   while (!WorkList.empty()) {
@@ -348,7 +352,7 @@ static Value *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
     uint64_t Offset = 0;
     for (Value *Entry : VPtrArray->operand_values()) {
       Offset += 1;
-      if (CHA.contains(Entry)) {
+      if (CHA.contains(GlobalValue::getGUID(Entry->getName()))) {
         Idxs.push_back(ConstantInt::get(
             Type::getInt64Ty(VTableInit->getContext()), Offset));
         return Entry;
@@ -368,17 +372,17 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
               getIndexesToAddressPoint(CHA, GV.getInitializer(), Idxs)) {
         Constant *AddressPointer = ConstantExpr::getGetElementPtr(
             GV.getInitializer()->getType(), &GV, Idxs);
-        VTables.insert(std::make_pair(RTTI, AddressPointer));
+        VTables.insert(std::make_pair(GlobalValue::getGUID(RTTI->getName()),
+                                      AddressPointer));
       }
     }
   }
 }
 
-bool DynCastOPTPass::isOffsetToTopMustZero(
-    SetVector<const Value *> &SuperClasses) {
+bool DynCastOPTPass::isOffsetToTopMustZero(SetVector<GUID> &SuperClasses) {
   // TODO: for non-linear, if the desitination type is the primary base class of
   // its super class, then the offset-to-top value is must 0.
-  for (auto *Super : SuperClasses) {
+  for (auto Super : SuperClasses) {
     if (CHA[Super].size() > 1)
       return false;
     assert(CHA[Super].size() == 1);
