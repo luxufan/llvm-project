@@ -60,9 +60,6 @@ private:
 
   void recordExternalClass(const GlobalVariable *RTTI);
 
-  Value *loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB,
-                        unsigned AddressSpace);
-
   bool invalidToOptimize(GUID RTTI) const { return Invalids.contains(RTTI); }
 
   bool isOffsetToTopMustZero(SetVector<GUID> &SuperClasses);

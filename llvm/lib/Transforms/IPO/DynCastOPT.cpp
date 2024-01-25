@@ -166,8 +166,14 @@ bool DynCastOPTPass::hasPrevailingVTables(GUID RTTI) {
   return VTables.contains(RTTI);
 }
 
-Value *DynCastOPTPass::loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB,
-                                      unsigned AddressSpace) {
+static Value *loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB,
+                             unsigned AddressSpace,
+                             bool IsOffsetToTopMustZero) {
+  if (IsOffsetToTopMustZero) {
+    NumOptDynCastOffsetToTopMustZero++;
+    return StaticPtr;
+  }
+
   LLVMContext &Context = IRB.getContext();
   Type *PTy = PointerType::get(IRB.getContext(), AddressSpace);
   // offset-to-top is always placed in vptr - 16. FIXME: -16 is incorrect for 32
@@ -246,17 +252,9 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   IRBuilder<> IRBLoadB(LoadBlock);
   IRBLoadB.SetInsertPoint(BrOfLB);
 
-  Value *RuntimePtr;
-  if (!IsOffsetToTopMustZero) {
-    // offset-to-top is always placed in vptr - 16. FIXME: -16 is incorrect for
-    // 32 bit address space.
-    RuntimePtr = loadRuntimePtr(StaticPtr, IRBLoadB,
-                                CI->getFunction()->getAddressSpace());
-  } else {
-    NumOptDynCastOffsetToTopMustZero++;
-    RuntimePtr = StaticPtr;
-  }
-
+  Value *RuntimePtr =
+      loadRuntimePtr(StaticPtr, IRBLoadB, CI->getFunction()->getAddressSpace(),
+                     IsOffsetToTopMustZero);
   Value *RuntimeVPtr = IRBLoadB.CreateLoad(PTy, RuntimePtr, "runtime_vptr");
   SmallVector<BasicBlock *> BBs;
   for (unsigned I = 0; I < Supers.size(); I++) {
