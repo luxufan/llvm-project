@@ -214,8 +214,11 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   if (invalidToOptimize(DestGUID) || !isUniqueBaseInFullCHA(DestGUID))
     return false;
 
+
+
   SetVector<GUID> Supers;
   getSuperClasses(DestGUID, Supers);
+
   bool IsOffsetToTopMustZero = Src2DstHint->getSExtValue() == 0 && isOffsetToTopMustZero(Supers);
 
   // If not all super classes have the prevailing vritual table definition,
@@ -242,6 +245,17 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     return true;
   }
 
+  SmallVector<std::pair<Constant *, int64_t>> CheckPoints;
+  for (unsigned I = 0; I < Supers.size(); I++) {
+    assert(VTables.contains(Supers[I]));
+    CheckPoints.push_back(std::make_pair(VTables[Supers[I]], computeOffset(DestGUID, Supers[I])));
+  }
+
+
+
+
+
+
   BasicBlock *LoadBlock =
       CI->getParent()->splitBasicBlock(CI, "load_block", /* Before */ true);
 
@@ -257,11 +271,6 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
                      IsOffsetToTopMustZero);
   Value *RuntimeVPtr = IRBLoadB.CreateLoad(PTy, RuntimePtr, "runtime_vptr");
 
-  SmallVector<std::pair<Constant *, int64_t>> CheckPoints;
-  for (unsigned I = 0; I < Supers.size(); I++) {
-    assert(VTables.contains(Supers[I]));
-    CheckPoints.push_back(std::make_pair(VTables[Supers[I]], computeOffset(DestGUID, Supers[I])));
-  }
 
   SmallVector<BasicBlock *> BBs;
   for (unsigned I = 0; I < CheckPoints.size(); I++) {
