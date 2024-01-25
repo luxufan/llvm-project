@@ -324,7 +324,8 @@ int64_t DynCastOPTPass::computeOffset(GUID Base, GUID Super) {
 
 static Value *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
                                        Constant *VTableInit,
-                                       SmallVectorImpl<Constant *> &Idxs) {
+                                       SmallVectorImpl<Constant *> &Idxs,
+                                       const DataLayout *Layout) {
   // With -fwhole-program-vtables, globalsplit pass may split the struct type
   // to array type. For example:
   //@_ZTVZN6recfun3def12contains_defERNS_4utilEP4exprE10def_find_p.0
@@ -337,8 +338,6 @@ static Value *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
   //  = internal constant [5 x ptr] [ptr null, ...], !type !795, !type !799
   //
   if (ConstantStruct *VPtrStruct = dyn_cast<ConstantStruct>(VTableInit)) {
-    Idxs.push_back(
-        ConstantInt::get(Type::getInt32Ty(VTableInit->getContext()), 0));
     if (VPtrStruct->getNumOperands() == 0)
       return nullptr;
     VTableInit = VPtrStruct->getOperand(0);
@@ -351,7 +350,7 @@ static Value *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
 
     uint64_t Offset = 0;
     for (Value *Entry : VPtrArray->operand_values()) {
-      Offset += 1;
+      Offset += Layout->getPointerSize();
       if (CHA.contains(GlobalValue::getGUID(Entry->getName()))) {
         Idxs.push_back(ConstantInt::get(
             Type::getInt64Ty(VTableInit->getContext()), Offset));
@@ -367,11 +366,10 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
     if (GV.hasName() && GV.getName().starts_with("_ZTV") &&
         GV.hasInitializer()) {
       SmallVector<Constant *> Idxs;
-      Idxs.push_back(ConstantInt::get(Type::getInt32Ty(M.getContext()), 0));
       if (Value *RTTI =
-              getIndexesToAddressPoint(CHA, GV.getInitializer(), Idxs)) {
+              getIndexesToAddressPoint(CHA, GV.getInitializer(), Idxs, Layout)) {
         Constant *AddressPointer = ConstantExpr::getGetElementPtr(
-            GV.getInitializer()->getType(), &GV, Idxs);
+            Type::getInt8Ty(M.getContext()), &GV, Idxs);
         VTables.insert(std::make_pair(GlobalValue::getGUID(RTTI->getName()),
                                       AddressPointer));
       }
@@ -391,6 +389,7 @@ bool DynCastOPTPass::isOffsetToTopMustZero(SetVector<GUID> &SuperClasses) {
 }
 
 PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {
+  Layout = &M.getDataLayout();
   buildTypeInfoGraph(M);
   collectVirtualTables(M);
   SmallVector<CallInst *> Deleted;

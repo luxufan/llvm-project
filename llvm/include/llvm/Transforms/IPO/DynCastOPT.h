@@ -19,6 +19,7 @@ public:
   using CHAMapType = DenseMap<GUID, SmallVector<BaseClass, 2>>;
 
 private:
+  const DataLayout *Layout;
   // Map from class to its base classes and offset pair
   // Value * is the pointer of RTTI descriptor
   CHAMapType CHA;

@@ -36,7 +36,7 @@ define internal ptr @_Z6dest_CP1A(ptr %a) {
 ; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
 ; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
 ; CHECK:       check_super.0:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1C, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[CHECK_SUPER_0]] ]
@@ -78,7 +78,7 @@ define internal ptr @_Z6dest_CP1A1(ptr %a) {
 ; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
 ; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
 ; CHECK:       check_super.0:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1C, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[CHECK_SUPER_0]] ]
@@ -121,7 +121,7 @@ define internal ptr @with_debug(ptr %a) {
 ; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
 ; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
 ; CHECK:       check_super.0:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1C, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[CHECK_SUPER_0]] ]

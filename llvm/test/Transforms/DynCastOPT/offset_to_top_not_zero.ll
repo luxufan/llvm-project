@@ -37,10 +37,10 @@ define internal ptr @_Z7dest_B1P1A(ptr %a) {
 ; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
 ; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
 ; CHECK:       check_super.0:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV2B1, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV2B1, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[CHECK_SUPER_1:%.*]]
 ; CHECK:       check_super.1:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1D, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[HANDLE_OFFSET]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[CHECK_SUPER_0]] ], [ 0, [[CHECK_SUPER_1]] ]
@@ -85,10 +85,10 @@ define internal ptr @_Z7dest_B2P1A(ptr %a) {
 ; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
 ; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
 ; CHECK:       check_super.0:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV2B2, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV2B2, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[CHECK_SUPER_1:%.*]]
 ; CHECK:       check_super.1:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1D, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[HANDLE_OFFSET]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[CHECK_SUPER_0]] ], [ 16, [[CHECK_SUPER_1]] ]
@@ -133,7 +133,7 @@ define internal ptr @_Z6dest_CP1A(ptr %a) {
 ; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
 ; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
 ; CHECK:       check_super.0:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1D, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[CHECK_SUPER_0]] ]
@@ -172,7 +172,7 @@ define internal noundef ptr @_Z6dest_DP1A(ptr noundef readonly %0) {
 ; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
 ; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
 ; CHECK:       check_super.0:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i64 2)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1D, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[HANDLE_OFFSET:%.*]], label [[TMP6:%.*]]
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[CHECK_SUPER_0]] ]
