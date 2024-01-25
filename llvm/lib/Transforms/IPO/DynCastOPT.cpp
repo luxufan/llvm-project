@@ -256,8 +256,15 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
       loadRuntimePtr(StaticPtr, IRBLoadB, CI->getFunction()->getAddressSpace(),
                      IsOffsetToTopMustZero);
   Value *RuntimeVPtr = IRBLoadB.CreateLoad(PTy, RuntimePtr, "runtime_vptr");
-  SmallVector<BasicBlock *> BBs;
+
+  SmallVector<std::pair<Constant *, int64_t>> CheckPoints;
   for (unsigned I = 0; I < Supers.size(); I++) {
+    assert(VTables.contains(Supers[I]));
+    CheckPoints.push_back(std::make_pair(VTables[Supers[I]], computeOffset(DestGUID, Supers[I])));
+  }
+
+  SmallVector<BasicBlock *> BBs;
+  for (unsigned I = 0; I < CheckPoints.size(); I++) {
     BBs.push_back(BasicBlock::Create(CI->getContext(),
                                      "check_super." + Twine(I),
                                      CI->getFunction(), CI->getParent()));
@@ -271,18 +278,17 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
                                    CI->getFunction(), CI->getParent()));
 
   PHINode *Phi =
-      PHINode::Create(Type::getInt64Ty(Context), Supers.size(), "", BBs.back());
+      PHINode::Create(Type::getInt64Ty(Context), CheckPoints.size(), "", BBs.back());
 
   BrOfLB->setSuccessor(0, BBs[0]);
 
-  for (unsigned I = 0; I < Supers.size(); I++) {
-    assert(VTables.contains(Supers[I]));
+  for (unsigned I = 0; I < CheckPoints.size(); I++) {
     Value *Result =
         CmpInst::Create(Instruction::ICmp, ICmpInst::Predicate::ICMP_EQ,
-                        RuntimeVPtr, VTables[Supers[I]], "", BBs[I]);
+                        RuntimeVPtr, CheckPoints[I].first, "", BBs[I]);
     BranchInst::Create(BBs.back(), BBs[I + 1], Result, BBs[I]);
     Phi->addIncoming(ConstantInt::get(Type::getInt64Ty(Context),
-                                      computeOffset(DestGUID, Supers[I])),
+                                      CheckPoints[I].second),
                      BBs[I]);
   }
 
