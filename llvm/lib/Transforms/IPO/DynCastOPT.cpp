@@ -218,7 +218,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   SetVector<GUID> Supers;
   getSuperClasses(DestGUID, Supers);
-
+  SmallVector<std::pair<Constant *, Constant *>> CheckPoints;
   bool IsOffsetToTopMustZero = Src2DstHint->getSExtValue() == 0 && isOffsetToTopMustZero(Supers);
 
   // If not all super classes have the prevailing vritual table definition,
@@ -236,7 +236,6 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   // superclasses by if the virtual table is used by other regular object file.
   // If it is not used and also not used in current LTO unit, then we can remove
   // the check for this class type.
-
   if (Supers.size() > MaxSuperChecks)
     return false;
 
@@ -245,11 +244,14 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     return true;
   }
 
-  SmallVector<std::pair<Constant *, int64_t>> CheckPoints;
   for (unsigned I = 0; I < Supers.size(); I++) {
     assert(VTables.contains(Supers[I]));
-    CheckPoints.push_back(std::make_pair(VTables[Supers[I]], computeOffset(DestGUID, Supers[I])));
+    CheckPoints.push_back(std::make_pair(
+        VTables[Supers[I]],
+        ConstantInt::get(Type::getInt64Ty(Context),
+                         computeOffset(DestGUID, Supers[I]), true)));
   }
+
 
 
 
@@ -296,9 +298,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
         CmpInst::Create(Instruction::ICmp, ICmpInst::Predicate::ICMP_EQ,
                         RuntimeVPtr, CheckPoints[I].first, "", BBs[I]);
     BranchInst::Create(BBs.back(), BBs[I + 1], Result, BBs[I]);
-    Phi->addIncoming(ConstantInt::get(Type::getInt64Ty(Context),
-                                      CheckPoints[I].second),
-                     BBs[I]);
+    Phi->addIncoming(CheckPoints[I].second, BBs[I]);
   }
 
   // Add the base offset
