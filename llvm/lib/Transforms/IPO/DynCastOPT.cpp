@@ -330,11 +330,7 @@ int64_t DynCastOPTPass::computeOffset(GUID Base, GUID Super) {
   }
   llvm_unreachable("Base is not a base of super");
 }
-
-static Constant *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
-                                       Constant *VTableInit,
-                                       SmallVectorImpl<Constant *> &Idxs,
-                                       const DataLayout *Layout) {
+static bool getSplatPointers(Constant *VTableInit, SmallVectorImpl<Constant *> &Pointers) {
   // With -fwhole-program-vtables, globalsplit pass may split the struct type
   // to array type. For example:
   //@_ZTVZN6recfun3def12contains_defERNS_4utilEP4exprE10def_find_p.0
@@ -348,25 +344,39 @@ static Constant *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
   //
   if (ConstantStruct *VPtrStruct = dyn_cast<ConstantStruct>(VTableInit)) {
     if (VPtrStruct->getNumOperands() == 0)
-      return nullptr;
+      return false;
     VTableInit = VPtrStruct->getOperand(0);
   }
 
   if (ConstantArray *VPtrArray = dyn_cast<ConstantArray>(VTableInit)) {
-    if (!VPtrArray->getType()->getElementType()->isPointerTy()) {
-      return nullptr;
-    }
+    if (!VPtrArray->getType()->getElementType()->isPointerTy())
+      return false;
 
-    uint64_t Offset = 0;
     for (Value *Entry : VPtrArray->operand_values()) {
-      Offset += Layout->getPointerSize();
-      if (CHA.contains(GlobalValue::getGUID(Entry->getName()))) {
-        Idxs.push_back(ConstantInt::get(
-            Type::getInt64Ty(VTableInit->getContext()), Offset));
-        return cast<Constant>(Entry);
-      }
+      Pointers.push_back(cast<Constant>(Entry));
     }
   }
+  return true;
+}
+
+static Constant *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
+                                       Constant *VTableInit,
+                                       SmallVectorImpl<Constant *> &Idxs,
+                                       const DataLayout *Layout) {
+  SmallVector<Constant *> FunctionPointers;
+  if (!getSplatPointers(VTableInit, FunctionPointers))
+    return nullptr;
+
+  uint64_t Offset = 0;
+  for (auto *Pointer : FunctionPointers) {
+    Offset += Layout->getPointerSize();
+    if (CHA.contains(GlobalValue::getGUID(Pointer->getName()))) {
+      Idxs.push_back(ConstantInt::get(
+          Type::getInt64Ty(VTableInit->getContext()), Offset));
+      return cast<Constant>(Pointer);
+    }
+  }
+
   return nullptr;
 }
 
