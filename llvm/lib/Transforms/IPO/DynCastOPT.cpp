@@ -331,7 +331,7 @@ int64_t DynCastOPTPass::computeOffset(GUID Base, GUID Super) {
   llvm_unreachable("Base is not a base of super");
 }
 
-static Value *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
+static Constant *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
                                        Constant *VTableInit,
                                        SmallVectorImpl<Constant *> &Idxs,
                                        const DataLayout *Layout) {
@@ -363,7 +363,7 @@ static Value *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
       if (CHA.contains(GlobalValue::getGUID(Entry->getName()))) {
         Idxs.push_back(ConstantInt::get(
             Type::getInt64Ty(VTableInit->getContext()), Offset));
-        return Entry;
+        return cast<Constant>(Entry);
       }
     }
   }
@@ -375,7 +375,7 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
     if (GV.hasName() && GV.getName().starts_with("_ZTV") &&
         GV.hasInitializer()) {
       SmallVector<Constant *> Idxs;
-      if (Value *RTTI =
+      if (Constant *RTTI =
               getIndexesToAddressPoint(CHA, GV.getInitializer(), Idxs, Layout)) {
         Constant *AddressPointer = ConstantExpr::getGetElementPtr(
             Type::getInt8Ty(M.getContext()), &GV, Idxs);
