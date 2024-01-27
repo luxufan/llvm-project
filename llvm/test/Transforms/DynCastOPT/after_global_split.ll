@@ -34,15 +34,16 @@ define internal noundef ptr @_Z7dest_B2P1A(ptr noundef readonly %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[HANDLE_OFFSET]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       handle_offset:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[CHECK_SUPER_0]] ], [ 0, [[CHECK_SUPER_1]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ null, [[CHECK_SUPER_1]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_NOTNULL]]
 ; CHECK:       dynamic_cast.notnull:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi ptr [ null, [[CHECK_SUPER_1]] ], [ [[TMP4]], [[HANDLE_OFFSET]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ null, [[CHECK_SUPER_1]] ], [ [[TMP5]], [[HANDLE_OFFSET]] ]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
 ; CHECK:       dynamic_cast.end:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[TMP5]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret ptr [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ [[TMP6]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[TMP7]]
 ;
 entry:
   %0 = icmp eq ptr %a, null

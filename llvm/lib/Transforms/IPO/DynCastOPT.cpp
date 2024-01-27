@@ -246,10 +246,10 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   for (unsigned I = 0; I < Supers.size(); I++) {
     assert(VTables.contains(Supers[I]));
+    Constant *Offset = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(Context), computeOffset(DestGUID, Supers[I]), true), PTy);
     CheckPoints.push_back(std::make_pair(
         VTables[Supers[I]],
-        ConstantInt::get(Type::getInt64Ty(Context),
-                         computeOffset(DestGUID, Supers[I]), true)));
+        Offset));
   }
 
 
@@ -289,7 +289,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
                                    CI->getFunction(), CI->getParent()));
 
   PHINode *Phi =
-      PHINode::Create(Type::getInt64Ty(Context), CheckPoints.size(), "", BBs.back());
+      PHINode::Create(PTy, CheckPoints.size(), "", BBs.back());
 
   BrOfLB->setSuccessor(0, BBs[0]);
 
@@ -302,8 +302,9 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   }
 
   // Add the base offset
+  Value *ToInt = PtrToIntInst::Create(Instruction::PtrToInt, Phi, Type::getInt64Ty(Context), "", BBs.back());
   Value *DestPtr = GetElementPtrInst::Create(Type::getInt8Ty(Context),
-                                             RuntimePtr, Phi, "", BBs.back());
+                                             RuntimePtr, ToInt, "", BBs.back());
   BranchInst::Create(CI->getParent(), BBs.back());
   PHINode *ResultPhi = PHINode::Create(PTy, 2, "", &*CI->getParent()->begin());
   ResultPhi->addIncoming(Constant::getNullValue(PTy), BBs[BBs.size() - 3]);
