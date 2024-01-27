@@ -246,7 +246,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   for (unsigned I = 0; I < Supers.size(); I++) {
     assert(VTables.contains(Supers[I]));
-    Constant *Offset = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(Context), computeOffset(DestGUID, Supers[I]), true), PTy);
+    Constant *Offset = computeOffset(DestGUID, Supers[I]);
     CheckPoints.push_back(std::make_pair(
         VTables[Supers[I]],
         Offset));
@@ -313,23 +313,24 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   return true;
 }
 
-int64_t DynCastOPTPass::computeOffset(GUID Base, GUID Super) {
+Constant *DynCastOPTPass::computeOffset(GUID Base, GUID Super) {
   assert(isUniqueBaseForSuper(Base, Super));
-  if (Base == Super)
-    return 0;
-  using BaseOffsetPair = std::pair<GUID, int64_t>;
-  SmallVector<BaseOffsetPair> WorkList;
-  WorkList.push_back(std::make_pair(Super, 0));
-  while (!WorkList.empty()) {
-    BaseOffsetPair Pair = WorkList.pop_back_val();
-    for (auto &B : CHA[Pair.first]) {
-      if (B.first != Base) {
-        WorkList.push_back(std::make_pair(B.first, B.second + Pair.second));
-      } else
-        return B.second + Pair.second;
+  int64_t Offset = 0;
+  if (Base != Super) {
+    using BaseOffsetPair = std::pair<GUID, int64_t>;
+    SmallVector<BaseOffsetPair> WorkList;
+    WorkList.push_back(std::make_pair(Super, 0));
+    while (!WorkList.empty()) {
+      BaseOffsetPair Pair = WorkList.pop_back_val();
+      for (auto &B : CHA[Pair.first]) {
+        if (B.first != Base) {
+          WorkList.push_back(std::make_pair(B.first, B.second + Pair.second));
+        } else
+          Offset = B.second + Pair.second;
+      }
     }
   }
-  llvm_unreachable("Base is not a base of super");
+  return ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(*Context), Offset, true), PointerType::get(*Context, 0));
 }
 static bool getSplatPointers(Constant *VTableInit, SmallVectorImpl<Constant *> &Pointers) {
   // With -fwhole-program-vtables, globalsplit pass may split the struct type
@@ -409,6 +410,7 @@ bool DynCastOPTPass::isOffsetToTopMustZero(SetVector<GUID> &SuperClasses) {
 }
 
 PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {
+  Context = &M.getContext();
   Layout = &M.getDataLayout();
   buildTypeInfoGraph(M);
   collectVirtualTables(M);

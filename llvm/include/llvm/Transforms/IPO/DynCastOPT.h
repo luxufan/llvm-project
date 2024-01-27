@@ -19,6 +19,7 @@ public:
   using CHAMapType = DenseMap<GUID, SmallVector<BaseClass, 2>>;
 
 private:
+  LLVMContext *Context;
   const DataLayout *Layout;
   // Map from class to its base classes and offset pair
   // Value * is the pointer of RTTI descriptor
@@ -53,7 +54,7 @@ private:
 
   void getMostDerivedClasses(GUID Base, SetVector<GUID> &MostDerivedClasses);
   bool handleDynCastCallSite(CallInst *CI);
-  int64_t computeOffset(GUID Base, GUID Super);
+  Constant *computeOffset(GUID Base, GUID Super);
 
   // Invalidate the class hierarchy analysis if a class is not internal
   void invalidateExternalClass();
