@@ -185,15 +185,17 @@ static Value *loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB,
                                "runtime_object");
 }
 
-static std::optional<std::string> convertFromZTIToZTS(StringRef ZTI) {
-  if (!ZTI.consume_front("_ZTI"))
-    return std::nullopt;
+static std::string convertFromZTIToZTS(StringRef ZTI) {
+  bool Succeed = ZTI.consume_front("_ZTI");
+  assert(Succeed && "Consume from failed");
+  (void)Succeed;
   return "_ZTS" + ZTI.str();
 }
 
-static std::optional<std::string> convertFromZTVToZTS(StringRef ZTV) {
-  if (!ZTV.consume_front("_ZTV"))
-    return std::nullopt;
+static std::string convertFromZTVToZTS(StringRef ZTV) {
+  bool Succeed = ZTV.consume_front("_ZTV");
+  assert(Succeed && "Consume from failed");
+  (void)Succeed;
   return "_ZTS" + ZTV.str();
 }
 
@@ -246,19 +248,15 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   assert(Called->hasName() && Called->getName() == "__dynamic_cast");
   Value *DestType = CI->getArgOperand(2);
   Value *StaticType = CI->getArgOperand(1);
-  auto DestTypeIdName = convertFromZTIToZTS(DestType->getName());
-  if (!DestTypeIdName)
-    return false;
+  std::string DestTypeIdName = convertFromZTIToZTS(DestType->getName());
 
   auto StaticTypeIdName = convertFromZTIToZTS(StaticType->getName());
-  if (!StaticTypeIdName)
-    return false;
   GUID DestGUID = GlobalValue::getGUID(DestType->getName());
 
   Type *PTy =
       PointerType::get(CI->getContext(), CI->getFunction()->getAddressSpace());
   SetVector<StringRef> Supers;
-  getSuperClasses(*DestTypeIdName, Supers);
+  getSuperClasses(DestTypeIdName, Supers);
 
   if (invalidToOptimize(DestGUID))
     return false;
@@ -268,13 +266,13 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     return true;
   }
 
-  if (!isUniqueBaseInFullCHA(*DestTypeIdName))
+  if (!isUniqueBaseInFullCHA(DestTypeIdName))
     return false;
 
 
 
   SmallVector<std::pair<Constant *, Constant *>> CheckPoints;
-  bool IsOffsetToTopMustZero = Src2DstHint->getSExtValue() == 0 && isOffsetToTopMustZero(*StaticTypeIdName);
+  bool IsOffsetToTopMustZero = Src2DstHint->getSExtValue() == 0 && isOffsetToTopMustZero(StaticTypeIdName);
 
   // If not all super classes have the prevailing vritual table definition,
   // then the optimization can not be performed.
@@ -301,15 +299,12 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     if (!getSplatPointers(VTableGV->getInitializer(), Pointers))
       assert(false);
 
-    auto TypeIDName = convertFromZTVToZTS(Supers[I]);
-    if (!TypeIDName)
-      assert(false);
-
-    uint64_t VTableOffset = getUniqueVTableOffset(*TypeIDName, Supers[I]);
+    std::string TypeIDName = convertFromZTVToZTS(Supers[I]);
+    uint64_t VTableOffset = getUniqueVTableOffset(TypeIDName, Supers[I]);
     Constant *AddressPoint = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Context), VTableGV,
                                 ConstantInt::get(Type::getInt64Ty(Context), VTableOffset));
 
-    Constant *Offset = computeOffset(*DestTypeIdName, VTableGV);
+    Constant *Offset = computeOffset(DestTypeIdName, VTableGV);
     CheckPoints.push_back(std::make_pair(
         AddressPoint, Offset));
   }
