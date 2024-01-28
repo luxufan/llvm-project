@@ -14,6 +14,14 @@
 
 namespace llvm {
 
+struct AddressPoint {
+  StringRef VTableName;
+  uint64_t Offset;
+
+  AddressPoint(StringRef Name, uint64_t Offset)
+    : VTableName(Name), Offset(Offset) {}
+};
+
 class DynCastOPTPass : public PassInfoMixin<DynCastOPTPass> {
   using GUID = GlobalValue::GUID;
   using BaseClass = std::pair<GUID, int64_t>;
@@ -46,11 +54,11 @@ private:
   // RTTIs that are external references.
   SetVector<GUID> ExternalReferenceRTTIs;
 
-  using TypeIdCompatibleVTableInfo = std::map<StringRef, std::vector<uint64_t>>;
+  using TypeIdCompatibleVTableInfo = std::vector<AddressPoint>;
   std::map<StringRef, TypeIdCompatibleVTableInfo> TypeIdCompatibleInfo;
 
   void insertCompatibleVTableInfo(StringRef TypeID, StringRef VTableName, uint64_t Offset) {
-    TypeIdCompatibleInfo[TypeID][VTableName].push_back(Offset);
+    TypeIdCompatibleInfo[TypeID].push_back(AddressPoint(VTableName, Offset));
   }
 
   std::optional<TypeIdCompatibleVTableInfo> getTypeIdCompatibleVTableInfo(StringRef TypeID) {
@@ -63,11 +71,10 @@ private:
   uint64_t getUniqueVTableOffset(StringRef TypeID, StringRef VTableName) {
     auto Info = getTypeIdCompatibleVTableInfo(TypeID);
     assert(Info && "TypeID is not in map");
-    auto I = (*Info).find(VTableName);
-    assert(I != (*Info).end() && "VTableName is not in map");
-
-    assert(I->second.size() == 1 && "Non unique");
-    return I->second[0];
+    for (auto &I : *Info) {
+      if (I.VTableName == VTableName)
+        return I.Offset;
+    }
   }
 
   void buildTypeInfoGraph(Module &M);

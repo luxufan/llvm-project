@@ -41,13 +41,13 @@ define internal ptr @_Z7dest_B2P1A(ptr noundef readonly %a) local_unnamed_addr #
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[CHECK_SUPER_1:%.*]]
 ; CHECK:       check_super.1:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1D, i64 16)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV2B2, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[HANDLE_OFFSET]], label [[CHECK_SUPER_2:%.*]]
 ; CHECK:       check_super.2:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV2B2, i64 16)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1D, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[HANDLE_OFFSET]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       handle_offset:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr [ inttoptr (i64 -16 to ptr), [[CHECK_SUPER_0]] ], [ inttoptr (i64 -16 to ptr), [[CHECK_SUPER_1]] ], [ null, [[CHECK_SUPER_2]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr [ inttoptr (i64 -16 to ptr), [[CHECK_SUPER_0]] ], [ null, [[CHECK_SUPER_1]] ], [ inttoptr (i64 -16 to ptr), [[CHECK_SUPER_2]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 0, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP6]]

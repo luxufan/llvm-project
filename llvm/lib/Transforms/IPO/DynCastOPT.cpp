@@ -111,17 +111,19 @@ void DynCastOPTPass::getSuperClasses(StringRef Class, SetVector<StringRef> &Supe
   if (!VtableInfo)
     return;
   for (auto &I : *VtableInfo) {
-    Supers.insert(I.first);
+    Supers.insert(I.VTableName);
   }
 }
 
 bool DynCastOPTPass::isUniqueBaseInFullCHA(StringRef C) {
+  DenseSet<StringRef> Visited;
   auto VTableInfo = getTypeIdCompatibleVTableInfo(C);
   if (!VTableInfo)
     return false;
   for (auto &I : *VTableInfo) {
-    if (I.second.size() > 1)
+    if (Visited.contains(I.VTableName))
       return false;
+    Visited.insert(I.VTableName);
   }
   return true;
 }
@@ -152,7 +154,7 @@ bool DynCastOPTPass::hasPrevailingVTables(StringRef Class) {
   if (!VTableInfo)
     return false;
   for (auto &VTable : *VTableInfo) {
-    const GlobalVariable *VT = M->getNamedGlobal(VTable.first);
+    const GlobalVariable *VT = M->getNamedGlobal(VTable.VTableName);
     if (!VT)
       return false;
     if (!VT->hasLocalLinkage())
@@ -429,20 +431,21 @@ bool DynCastOPTPass::isOffsetToTopMustZero(StringRef Class) {
   if (!hasPrevailingVTables(Class))
     return false;
 
+  if (!isUniqueBaseInFullCHA(Class))
+    return false;
+
   auto Result = getTypeIdCompatibleVTableInfo(Class);
   if (!Result)
     return false;
 
   for (auto &VTable : *Result) {
-    GlobalVariable *VTableGV = M->getGlobalVariable(VTable.first, true);
+    GlobalVariable *VTableGV = M->getGlobalVariable(VTable.VTableName, true);
     assert(VTableGV->hasInitializer());
     SmallVector<Constant *> Pointers;
     if (!getSplatPointers(VTableGV->getInitializer(), Pointers))
       assert(false);
-    if (VTable.second.size() > 1)
-      return false;
 
-    unsigned Index = (VTable.second[0] - Layout->getPointerSize() * 2) / Layout->getPointerSize();
+    unsigned Index = (VTable.Offset - Layout->getPointerSize() * 2) / Layout->getPointerSize();
     Constant *OffsetToTop = Pointers[Index];
     if (!isa<ConstantPointerNull>(OffsetToTop))
       return false;

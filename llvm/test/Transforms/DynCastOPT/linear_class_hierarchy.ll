@@ -28,10 +28,10 @@ define internal noundef ptr @_Z7dest_B2P1A(ptr noundef readonly %a) {
 ; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[A]], align 8
 ; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
 ; CHECK:       check_super.0:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV2B2, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[CHECK_SUPER_1:%.*]]
 ; CHECK:       check_super.1:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV2B2, i64 16)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[HANDLE_OFFSET]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ null, [[CHECK_SUPER_1]] ]
