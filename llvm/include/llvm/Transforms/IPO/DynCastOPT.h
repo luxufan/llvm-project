@@ -54,21 +54,21 @@ private:
   // RTTIs that are external references.
   SetVector<GUID> ExternalReferenceRTTIs;
 
-  using TypeIdCompatibleVTableInfo = std::vector<AddressPoint>;
-  std::map<StringRef, TypeIdCompatibleVTableInfo> TypeIdCompatibleInfo;
+  using AddressPointsVector = std::vector<AddressPoint>;
+  std::map<StringRef, AddressPointsVector> TypeIdCompatibleInfo;
 
-  void insertCompatibleVTableInfo(StringRef TypeID, StringRef VTableName, uint64_t Offset) {
+  void insertCompatibleAddressPoint(StringRef TypeID, StringRef VTableName, uint64_t Offset) {
     TypeIdCompatibleInfo[TypeID].push_back(AddressPoint(VTableName, Offset));
   }
 
-  std::optional<TypeIdCompatibleVTableInfo> getTypeIdCompatibleVTableInfo(StringRef TypeID) {
+  std::optional<AddressPointsVector> getTypeIdCompatibleVTableInfo(StringRef TypeID) {
       auto Result = TypeIdCompatibleInfo.find(TypeID);
       if (Result == TypeIdCompatibleInfo.end())
         return std::nullopt;
       return Result->second;
   }
 
-  uint64_t getUniqueVTableOffset(StringRef TypeID, StringRef VTableName) {
+  uint64_t getPrimaryAddressPoint(StringRef TypeID, StringRef VTableName) {
     auto Info = getTypeIdCompatibleVTableInfo(TypeID);
     assert(Info && "TypeID is not in map");
     for (auto &I : *Info) {

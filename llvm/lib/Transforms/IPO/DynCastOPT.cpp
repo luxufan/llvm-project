@@ -302,7 +302,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
       assert(false);
 
     std::string TypeIDName = convertFromZTVToZTS(Supers[I]);
-    uint64_t VTableOffset = getUniqueVTableOffset(TypeIDName, Supers[I]);
+    uint64_t VTableOffset = getPrimaryAddressPoint(TypeIDName, Supers[I]);
     Constant *AddressPoint = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Context), VTableGV,
                                 ConstantInt::get(Type::getInt64Ty(Context), VTableOffset));
 
@@ -376,7 +376,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
 Constant *DynCastOPTPass::computeOffset(StringRef BaseZTS, GlobalVariable *VTable) {
 
-  uint64_t Offset = getUniqueVTableOffset(BaseZTS, VTable->getName());
+  uint64_t Offset = getPrimaryAddressPoint(BaseZTS, VTable->getName());
   assert(VTable->hasInitializer());
   SmallVector<Constant *> Pointers;
   getSplatPointers(VTable->getInitializer(), Pointers);
@@ -419,7 +419,7 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
             ->getZExtValue();
 
       if (auto *TypeId = dyn_cast<MDString>(TypeID)) {
-        insertCompatibleVTableInfo(TypeId->getString(), GV.getName(), Offset);
+        insertCompatibleAddressPoint(TypeId->getString(), GV.getName(), Offset);
       }
     }
   }
