@@ -3,6 +3,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
+
 @_ZTVN10__cxxabiv117__class_type_infoE = external global [0 x ptr]
 @_ZTS1A = internal constant [3 x i8] c"1A\00", align 1
 @_ZTI1A = internal constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS1A }, align 8
@@ -11,14 +12,13 @@ target triple = "aarch64-unknown-linux-gnu"
 @_ZTI2B1 = internal constant { ptr, ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), ptr @_ZTS2B1, ptr @_ZTI1A }, align 8
 @_ZTS2B2 = internal constant [4 x i8] c"2B2\00", align 1
 @_ZTI2B2 = internal constant { ptr, ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), ptr @_ZTS2B2, ptr @_ZTI1A }, align 8
-@_ZTV1C = internal unnamed_addr constant { [4 x ptr], [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1C, ptr null, ptr null], [4 x ptr] [ptr inttoptr (i64 -16 to ptr), ptr @_ZTI1C, ptr null, ptr null] }, align 8
+@_ZTV1C = internal unnamed_addr constant { [4 x ptr], [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1C, ptr null, ptr null], [4 x ptr] [ptr inttoptr (i64 -16 to ptr), ptr @_ZTI1C, ptr null, ptr null] }, align 8, !type !27, !type !28, !type !29, !type !30, !type !31
 @_ZTVN10__cxxabiv121__vmi_class_type_infoE = external global [0 x ptr]
 @_ZTS1C = internal constant [3 x i8] c"1C\00", align 1
 @_ZTI1C = internal constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64 } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), ptr @_ZTS1C, i32 1, i32 2, ptr @_ZTI2B1, i64 2, ptr @_ZTI2B2, i64 4098 }, align 8
-@_ZTV2B1 = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B1, ptr null, ptr null] }, align 8
-@_ZTV1A = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1A, ptr null, ptr null] }, align 8
-@_ZTV2B2 = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B2, ptr null, ptr null] }, align 8
-
+@_ZTV2B1 = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B1, ptr null, ptr null] }, align 8, !type !27, !type !30
+@_ZTV1A = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1A, ptr null, ptr null] }, align 8, !type !27
+@_ZTV2B2 = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B2, ptr null, ptr null] }, align 8, !type !27, !type !32
 declare ptr @__dynamic_cast(ptr, ptr, ptr, i64)
 
 define internal ptr @_Z6dest_CP1A(ptr %a) {
@@ -41,14 +41,15 @@ define internal ptr @_Z6dest_CP1A(ptr %a) {
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 0, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_NOTNULL]]
 ; CHECK:       dynamic_cast.notnull:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ [[TMP4]], [[HANDLE_OFFSET]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ [[TMP5]], [[HANDLE_OFFSET]] ]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
 ; CHECK:       dynamic_cast.end:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[TMP5]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret ptr [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ [[TMP6]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[TMP7]]
 ;
 entry:
   %0 = icmp eq ptr %a, null
@@ -84,14 +85,15 @@ define internal ptr @_Z6dest_CP1A1(ptr %a) {
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 0, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_NOTNULL]]
 ; CHECK:       dynamic_cast.notnull:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ [[TMP4]], [[HANDLE_OFFSET]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ [[TMP5]], [[HANDLE_OFFSET]] ]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
 ; CHECK:       dynamic_cast.end:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[TMP5]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY]] ]
-; CHECK-NEXT:    ret ptr [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ [[TMP6]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY]] ]
+; CHECK-NEXT:    ret ptr [[TMP7]]
 ;
 entry:
   %0 = icmp eq ptr %a, null
@@ -115,7 +117,7 @@ define internal ptr @with_debug(ptr %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[DYNAMIC_CAST_END:%.*]], label [[LOAD_BLOCK:%.*]]
 ; CHECK:       load_block:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata [[META7:![0-9]+]], metadata !DIExpression()), !dbg [[DBG13:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata [[META13:![0-9]+]], metadata !DIExpression()), !dbg [[DBG19:![0-9]+]]
 ; CHECK-NEXT:    [[VPTR:%.*]] = load ptr, ptr [[A]], align 8
 ; CHECK-NEXT:    [[ADD_OFFSET_TO_TOP:%.*]] = getelementptr inbounds i8, ptr [[VPTR]], i64 -16
 ; CHECK-NEXT:    [[OFFSET_TO_TOP:%.*]] = load i64, ptr [[ADD_OFFSET_TO_TOP]], align 8
@@ -128,14 +130,15 @@ define internal ptr @with_debug(ptr %a) {
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 0, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_NOTNULL]]
 ; CHECK:       dynamic_cast.notnull:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ [[TMP4]], [[HANDLE_OFFSET]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ [[TMP5]], [[HANDLE_OFFSET]] ]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
 ; CHECK:       dynamic_cast.end:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[TMP5]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret ptr [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ [[TMP6]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[TMP7]]
 ;
 entry:
   %0 = icmp eq ptr %a, null
@@ -171,6 +174,13 @@ entry:
 declare noundef nonnull ptr @_Znwm(i64 noundef)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
+!27 = !{i64 16, !"_ZTS1A"}
+!28 = !{i64 48, !"_ZTS1A"}
+!29 = !{i64 16, !"_ZTS1C"}
+!30 = !{i64 16, !"_ZTS2B1"}
+!31 = !{i64 48, !"_ZTS2B2"}
+!32 = !{i64 16, !"_ZTS2B2"}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
@@ -193,14 +203,14 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 !19 = distinct !DILexicalBlock(scope: !7, file: !1, line: 8, column: 7)
 !26 = !DILocation(line: 13, column: 3, scope: !7)
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-; CHECK: [[META1]] = !DIFile(filename: "test.c", directory: {{.*}})
-; CHECK: [[META2]] = !{}
-; CHECK: [[META7]] = !DILocalVariable(name: "bar", arg: 1, scope: [[META8:![0-9]+]], file: [[META1]], line: 3, type: [[META12:![0-9]+]])
-; CHECK: [[META8]] = distinct !DISubprogram(name: "foo", scope: [[META1]], file: [[META1]], line: 3, type: [[META9:![0-9]+]], scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META2]])
-; CHECK: [[META9]] = !DISubroutineType(types: [[META10:![0-9]+]])
-; CHECK: [[META10]] = !{[[META11:![0-9]+]], [[META12]], [[META12]]}
-; CHECK: [[META11]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-; CHECK: [[META12]] = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
-; CHECK: [[DBG13]] = !DILocation(line: 0, scope: [[META8]])
+; CHECK: [[META6:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META7:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META8:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
+; CHECK: [[META7]] = !DIFile(filename: "test.c", directory: {{.*}})
+; CHECK: [[META8]] = !{}
+; CHECK: [[META13]] = !DILocalVariable(name: "bar", arg: 1, scope: [[META14:![0-9]+]], file: [[META7]], line: 3, type: [[META18:![0-9]+]])
+; CHECK: [[META14]] = distinct !DISubprogram(name: "foo", scope: [[META7]], file: [[META7]], line: 3, type: [[META15:![0-9]+]], scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META6]], retainedNodes: [[META8]])
+; CHECK: [[META15]] = !DISubroutineType(types: [[META16:![0-9]+]])
+; CHECK: [[META16]] = !{[[META17:![0-9]+]], [[META18]], [[META18]]}
+; CHECK: [[META17]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+; CHECK: [[META18]] = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
+; CHECK: [[DBG19]] = !DILocation(line: 0, scope: [[META14]])
 ;.
