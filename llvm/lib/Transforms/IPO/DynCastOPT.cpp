@@ -37,8 +37,6 @@ bool DynCastOPTPass::hasPrevailingVTables(StringRef Class) {
     const GlobalVariable *VT = M->getNamedGlobal(VTable.VTableName);
     if (!VT)
       return false;
-    if (!VT->hasLocalLinkage())
-      return false;
   }
   return true;
 }
