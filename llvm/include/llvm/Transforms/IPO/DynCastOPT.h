@@ -46,7 +46,7 @@ private:
   DenseMap<GUID, Constant *> VTables;
 
   // dynamic_cast to these classes can not be optimized.
-  SetVector<GUID> Invalids;
+  SetVector<StringRef> Invalids;
 
   // RTTIs that has external linkage.
   SetVector<GUID> ExternalLinkageRTTIs;
@@ -85,14 +85,14 @@ private:
   bool hasPrevailingVTables(StringRef RTTIs);
 
   bool handleDynCastCallSite(CallInst *CI);
-  Constant *computeOffset(GlobalVariable *Super, uint64_t Offset);
+  Constant *getOffsetToTop(GlobalVariable *Super, uint64_t Offset);
 
   // Invalidate the class hierarchy analysis if a class is not internal
   void invalidateExternalClass();
 
   void recordExternalClass(const GlobalVariable *RTTI);
 
-  bool invalidToOptimize(GUID RTTI) const { return Invalids.contains(RTTI); }
+  bool invalidToOptimize(StringRef TypeId) const { return Invalids.contains(TypeId); }
 
   bool isOffsetToTopMustZero(StringRef Class);
 

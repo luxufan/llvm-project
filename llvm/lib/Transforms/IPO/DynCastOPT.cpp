@@ -23,30 +23,6 @@ const int64_t PublicMaks = 2;
 const int64_t ShiftToOffset = 8;
 
 void DynCastOPTPass::invalidateExternalClass() {
-  SmallVector<GUID> WorkList;
-  for_each(ExternalLinkageRTTIs,
-           [&WorkList](GUID V) { WorkList.push_back(V); });
-
-  while (!WorkList.empty()) {
-    GUID Current = WorkList.pop_back_val();
-    if (CHA.contains(Current)) {
-      for (auto &Base : CHA[Current])
-        WorkList.push_back(Base.first);
-    }
-    Invalids.insert(Current);
-  }
-
-  WorkList.clear();
-  for_each(ExternalReferenceRTTIs,
-           [&WorkList](GUID V) { WorkList.push_back(V); });
-  while (!WorkList.empty()) {
-    GUID Current = WorkList.pop_back_val();
-    if (SuperClasses.contains(Current)) {
-      for (auto Super : SuperClasses[Current])
-        WorkList.push_back(Super);
-    }
-    Invalids.insert(Current);
-  }
 }
 
 void DynCastOPTPass::recordExternalClass(const GlobalVariable *RTTI) {
@@ -254,7 +230,9 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     return false;
   std::vector<AddressPoint> NecessaryAddressPoints = *CompatibleAddressPoints;
 
-  if (invalidToOptimize(DestGUID))
+  if (any_of(NecessaryAddressPoints, [this](AddressPoint P) {
+    return this->invalidToOptimize(P.VTableName);
+  }))
     return false;
 
   if (NecessaryAddressPoints.empty()) {
@@ -285,7 +263,6 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   if (NecessaryAddressPoints.size() > MaxSuperChecks)
     return false;
 
-
   for (unsigned I = 0; I < NecessaryAddressPoints.size(); I++) {
     GlobalVariable *VTableGV = M->getGlobalVariable(NecessaryAddressPoints[I].VTableName, true);
     assert(VTableGV->hasInitializer());
@@ -299,7 +276,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     Constant *AddressPoint = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Context), VTableGV,
                                 ConstantInt::get(Type::getInt64Ty(Context), VTableOffset));
 
-    Constant *Offset = computeOffset(VTableGV, NecessaryAddressPoints[I].Offset);
+    Constant *Offset = getOffsetToTop(VTableGV, NecessaryAddressPoints[I].Offset);
     CheckPoints.push_back(std::make_pair(
         AddressPoint, Offset));
   }
@@ -367,7 +344,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   return true;
 }
 
-Constant *DynCastOPTPass::computeOffset(GlobalVariable *VTable, uint64_t Offset) {
+Constant *DynCastOPTPass::getOffsetToTop(GlobalVariable *VTable, uint64_t Offset) {
   assert(VTable->hasInitializer());
   SmallVector<Constant *> Pointers;
   getSplatPointers(VTable->getInitializer(), Pointers);
@@ -402,6 +379,11 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     Types.clear();
     GV.getMetadata(LLVMContext::MD_type, Types);
+    if (!Types.empty()) {
+      if (!GV.isLocalLinkage(GV.getLinkage())) {
+        Invalids.insert(GV.getName());
+      }
+    }
     for (MDNode *Type : Types) {
       auto TypeID = Type->getOperand(1).get();
       uint64_t Offset =
@@ -432,12 +414,7 @@ bool DynCastOPTPass::isOffsetToTopMustZero(StringRef Class) {
   for (auto &VTable : *Result) {
     GlobalVariable *VTableGV = M->getGlobalVariable(VTable.VTableName, true);
     assert(VTableGV->hasInitializer());
-    SmallVector<Constant *> Pointers;
-    if (!getSplatPointers(VTableGV->getInitializer(), Pointers))
-      assert(false);
-
-    unsigned Index = (VTable.Offset - Layout->getPointerSize() * 2) / Layout->getPointerSize();
-    Constant *OffsetToTop = Pointers[Index];
+    Constant *OffsetToTop = getOffsetToTop(VTableGV, VTable.Offset);
     if (!isa<ConstantPointerNull>(OffsetToTop))
       return false;
   }
