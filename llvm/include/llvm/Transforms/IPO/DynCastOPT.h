@@ -23,36 +23,13 @@ struct AddressPoint {
 };
 
 class DynCastOPTPass : public PassInfoMixin<DynCastOPTPass> {
-  using GUID = GlobalValue::GUID;
-  using BaseClass = std::pair<GUID, int64_t>;
-
-public:
-  using CHAMapType = DenseMap<GUID, SmallVector<BaseClass, 2>>;
-
 private:
   LLVMContext *Context;
   Module *M;
   const DataLayout *Layout;
-  // Map from class to its base classes and offset pair
-  // Value * is the pointer of RTTI descriptor
-  CHAMapType CHA;
-
-  // Map from class to its super classes
-  // Value * is the pointer of RTTI descriptor
-  DenseMap<GUID, SmallVector<GUID>> SuperClasses;
-
-  // Maps from class to its virtual table address pointer in itself's virtual
-  // table. The key is the pointer of RTTI descriptor
-  DenseMap<GUID, Constant *> VTables;
 
   // dynamic_cast to these classes can not be optimized.
   SetVector<StringRef> Invalids;
-
-  // RTTIs that has external linkage.
-  SetVector<GUID> ExternalLinkageRTTIs;
-
-  // RTTIs that are external references.
-  SetVector<GUID> ExternalReferenceRTTIs;
 
   using AddressPointsVector = std::vector<AddressPoint>;
   std::map<StringRef, AddressPointsVector> TypeIdCompatibleAddressPoints;
@@ -77,20 +54,13 @@ private:
     return PrimaryVTableAddressPoint[VTableName];
   }
 
-  void buildTypeInfoGraph(Module &M);
   void collectVirtualTables(Module &M);
-  bool isUniqueBaseInFullCHA(StringRef Base);
-  bool isUniqueBaseForSuper(GUID Base, GUID Super);
+  bool doesAllAddressPointHaveDifferentVTable(std::vector<AddressPoint> AddressPoints);
 
   bool hasPrevailingVTables(StringRef RTTIs);
 
   bool handleDynCastCallSite(CallInst *CI);
   Constant *getOffsetToTop(GlobalVariable *Super, uint64_t Offset);
-
-  // Invalidate the class hierarchy analysis if a class is not internal
-  void invalidateExternalClass();
-
-  void recordExternalClass(const GlobalVariable *RTTI);
 
   bool invalidToOptimize(StringRef TypeId) const { return Invalids.contains(TypeId); }
 

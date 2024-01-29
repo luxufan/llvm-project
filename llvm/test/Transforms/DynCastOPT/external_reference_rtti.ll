@@ -34,7 +34,7 @@ define internal ptr @_Z7dest_B2P1A(ptr %a) {
 ; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
 ; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
 ; CHECK:       check_super.0:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 48)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 16)
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET:%.*]], label [[CHECK_SUPER_1:%.*]]
 ; CHECK:       check_super.1:
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV2B2, i64 16)
@@ -42,16 +42,17 @@ define internal ptr @_Z7dest_B2P1A(ptr %a) {
 ; CHECK:       handle_offset:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ inttoptr (i64 -16 to ptr), [[CHECK_SUPER_0]] ], [ null, [[CHECK_SUPER_1]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 0, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP5]]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_NOTNULL]]
 ; CHECK:       dynamic_cast.notnull:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ null, [[CHECK_SUPER_1]] ], [ [[TMP5]], [[HANDLE_OFFSET]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ null, [[CHECK_SUPER_1]] ], [ [[TMP6]], [[HANDLE_OFFSET]] ]
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_END:%.*]]
 ; CHECK:       dynamic_cast.null:
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
 ; CHECK:       dynamic_cast.end:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ [[TMP6]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[DYNAMIC_CAST_NULL]] ]
-; CHECK-NEXT:    ret ptr [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi ptr [ [[TMP7]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[DYNAMIC_CAST_NULL]] ]
+; CHECK-NEXT:    ret ptr [[TMP8]]
 ;
 entry:
   %0 = icmp eq ptr %a, null

@@ -18,103 +18,15 @@ using namespace llvm;
 static cl::opt<unsigned> MaxSuperChecks(
     "max-super-checks", cl::init(10), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only check supers with less or equal than N supers"));
-const int64_t VirtualMask = 1;
-const int64_t PublicMaks = 2;
-const int64_t ShiftToOffset = 8;
 
-void DynCastOPTPass::invalidateExternalClass() {
-}
-
-void DynCastOPTPass::recordExternalClass(const GlobalVariable *RTTI) {
-  assert(!RTTI->isInternalLinkage(RTTI->getLinkage()) &&
-         "This is a internal class");
-  ExternalLinkageRTTIs.insert(GlobalValue::getGUID(RTTI->getName()));
-}
-
-void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
-  for (GlobalVariable &GV : M.globals()) {
-    if (GV.hasName() && GV.getName().starts_with("_ZTI")) {
-      GUID TypeGUID = GlobalValue::getGUID(GV.getName());
-      if (!GV.hasInitializer()) {
-        if (GV.isExternalLinkage(GV.getLinkage()))
-          ExternalReferenceRTTIs.insert(TypeGUID);
-        continue;
-      }
-      if (ConstantStruct *Initializer =
-              dyn_cast<ConstantStruct>(GV.getInitializer())) {
-        // __class_type_info has type { ptr, ptr }
-        // __si_class_type_info has type { ptr, ptr, ptr }
-        // __vmi_class_type_info has type { ptr, ptr, i32, i32, ptr, i64 ... }
-        if (Initializer->getNumOperands() == 2) {
-          CHA.getOrInsertDefault(TypeGUID);
-        } else if (Initializer->getNumOperands() == 3) {
-          Value *Base = Initializer->getOperand(2);
-          GUID BaseGUID = GlobalValue::getGUID(Base->getName());
-          CHA[TypeGUID].push_back(std::make_pair(BaseGUID, 0));
-          SuperClasses[BaseGUID].push_back(TypeGUID);
-        } else if (Initializer->getNumOperands() > 4) {
-          unsigned NumBase =
-              cast<ConstantInt>(Initializer->getOperand(3))->getZExtValue();
-          for (unsigned I = 0; I < NumBase; I++) {
-            int64_t OffsetFlag =
-                cast<ConstantInt>(Initializer->getOperand(I * 2 + 5))
-                    ->getSExtValue();
-            Value *Base = Initializer->getOperand(I * 2 + 4);
-            GUID BaseGUID = GlobalValue::getGUID(Base->getName());
-            bool IsVirtual = OffsetFlag & (VirtualMask);
-            assert(!IsVirtual && "Virtual inheritance");
-            int64_t Offset = OffsetFlag >> ShiftToOffset;
-            bool IsPublic = OffsetFlag & (PublicMaks);
-            if (!IsPublic)
-              continue;
-            CHA[TypeGUID].push_back(std::make_pair(BaseGUID, Offset));
-            SuperClasses[BaseGUID].push_back(TypeGUID);
-          }
-        }
-      } else {
-        assert(false && "Initializer is not a constant struct");
-      }
-      if (!GV.isInternalLinkage(GV.getLinkage()))
-        recordExternalClass(&GV);
-    }
-  }
-  invalidateExternalClass();
-}
-
-
-
-bool DynCastOPTPass::isUniqueBaseInFullCHA(StringRef C) {
+bool DynCastOPTPass::doesAllAddressPointHaveDifferentVTable(std::vector<AddressPoint> AddressPoints) {
   DenseSet<StringRef> Visited;
-  auto VTableInfo = getTypeIdCompatibleVTableInfo(C);
-  if (!VTableInfo)
-    return false;
-  for (auto &I : *VTableInfo) {
+  for (auto &I : AddressPoints) {
     if (Visited.contains(I.VTableName))
       return false;
     Visited.insert(I.VTableName);
   }
   return true;
-}
-
-bool DynCastOPTPass::isUniqueBaseForSuper(GUID Base, GUID Super) {
-  if (Base == Super)
-    return true;
-
-  unsigned ReachCount = 0;
-  SmallVector<GUID> WorkList;
-  WorkList.push_back(Super);
-  while (!WorkList.empty()) {
-    GUID Current = WorkList.pop_back_val();
-    for (const auto &BasePair : CHA[Current]) {
-      GUID BaseP = BasePair.first;
-      if (BaseP == Base)
-        ReachCount++;
-      else
-        WorkList.push_back(BaseP);
-    }
-  }
-  assert(ReachCount != 0 && "Base is not a base of Super");
-  return ReachCount < 2;
 }
 
 bool DynCastOPTPass::hasPrevailingVTables(StringRef Class) {
@@ -221,7 +133,6 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   std::string DestTypeIdName = convertFromZTIToZTS(DestType->getName());
 
   auto StaticTypeIdName = convertFromZTIToZTS(StaticType->getName());
-  GUID DestGUID = GlobalValue::getGUID(DestType->getName());
 
   Type *PTy =
       PointerType::get(CI->getContext(), CI->getFunction()->getAddressSpace());
@@ -240,9 +151,8 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     return true;
   }
 
-  if (!isUniqueBaseInFullCHA(DestTypeIdName))
+  if (!doesAllAddressPointHaveDifferentVTable(NecessaryAddressPoints))
     return false;
-
 
   SmallVector<std::pair<Constant *, Constant *>> CheckPoints;
   bool IsOffsetToTopMustZero = Src2DstHint->getSExtValue() == 0 && isOffsetToTopMustZero(StaticTypeIdName);
@@ -276,9 +186,9 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     Constant *AddressPoint = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Context), VTableGV,
                                 ConstantInt::get(Type::getInt64Ty(Context), VTableOffset));
 
-    Constant *Offset = getOffsetToTop(VTableGV, NecessaryAddressPoints[I].Offset);
+    Constant *OffsetToTop = getOffsetToTop(VTableGV, NecessaryAddressPoints[I].Offset);
     CheckPoints.push_back(std::make_pair(
-        AddressPoint, Offset));
+        AddressPoint, OffsetToTop));
   }
 
 
@@ -353,27 +263,6 @@ Constant *DynCastOPTPass::getOffsetToTop(GlobalVariable *VTable, uint64_t Offset
 }
 
 
-static Constant *getIndexesToAddressPoint(const DynCastOPTPass::CHAMapType &CHA,
-                                       Constant *VTableInit,
-                                       SmallVectorImpl<Constant *> &Idxs,
-                                       const DataLayout *Layout) {
-  SmallVector<Constant *> FunctionPointers;
-  if (!getSplatPointers(VTableInit, FunctionPointers))
-    return nullptr;
-
-  uint64_t Offset = 0;
-  for (auto *Pointer : FunctionPointers) {
-    Offset += Layout->getPointerSize();
-    if (CHA.contains(GlobalValue::getGUID(Pointer->getName()))) {
-      Idxs.push_back(ConstantInt::get(
-          Type::getInt64Ty(VTableInit->getContext()), Offset));
-      return cast<Constant>(Pointer);
-    }
-  }
-
-  return nullptr;
-}
-
 void DynCastOPTPass::collectVirtualTables(Module &M) {
   SmallVector<MDNode *> Types;
   for (GlobalVariable &GV : M.globals()) {
@@ -402,9 +291,6 @@ bool DynCastOPTPass::isOffsetToTopMustZero(StringRef Class) {
   // TODO: for non-linear, if the desitination type is the primary base class of
   // its super class, then the offset-to-top value is must 0.
   if (!hasPrevailingVTables(Class))
-    return false;
-
-  if (!isUniqueBaseInFullCHA(Class))
     return false;
 
   auto Result = getTypeIdCompatibleVTableInfo(Class);
