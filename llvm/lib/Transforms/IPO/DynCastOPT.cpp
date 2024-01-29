@@ -129,8 +129,12 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   Function *Called = CI->getCalledFunction();
   assert(Called->hasName() && Called->getName() == "__dynamic_cast");
   Value *DestType = CI->getArgOperand(2);
+
   Value *StaticType = CI->getArgOperand(1);
   std::string DestTypeIdName = convertFromZTIToZTS(DestType->getName());
+
+  if (invalidToOptimize(DestTypeIdName))
+    return false;
 
   auto StaticTypeIdName = convertFromZTIToZTS(StaticType->getName());
 
@@ -140,11 +144,6 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   if (!CompatibleAddressPoints)
     return false;
   std::vector<AddressPoint> NecessaryAddressPoints = *CompatibleAddressPoints;
-
-  if (any_of(NecessaryAddressPoints, [this](AddressPoint P) {
-    return this->invalidToOptimize(P.VTableName);
-  }))
-    return false;
 
   if (NecessaryAddressPoints.empty()) {
     CI->replaceAllUsesWith(ConstantInt::getNullValue(PTy));
@@ -268,11 +267,7 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     Types.clear();
     GV.getMetadata(LLVMContext::MD_type, Types);
-    if (!Types.empty()) {
-      if (!GV.isLocalLinkage(GV.getLinkage())) {
-        Invalids.insert(GV.getName());
-      }
-    }
+    bool IsLocalLinkage = GV.isLocalLinkage(GV.getLinkage());
     for (MDNode *Type : Types) {
       auto TypeID = Type->getOperand(1).get();
       uint64_t Offset =
@@ -282,6 +277,8 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
 
       if (auto *TypeId = dyn_cast<MDString>(TypeID)) {
         insertTypeIdCompatibleAddressPoint(TypeId->getString(), GV.getName(), Offset);
+        if (!IsLocalLinkage)
+          Invalids.insert(TypeId->getString());
       }
     }
   }
