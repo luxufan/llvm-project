@@ -29,7 +29,7 @@ bool DynCastOPTPass::doesAllAddressPointHaveDifferentVTable(std::vector<AddressP
   return true;
 }
 
-bool DynCastOPTPass::hasPrevailingVTables(StringRef Class) {
+bool DynCastOPTPass::allCompatibleAddressPointPrevailing(StringRef Class) {
   auto VTableInfo = getTypeIdCompatibleVTableInfo(Class);
   if (!VTableInfo)
     return false;
@@ -147,6 +147,9 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     CI->replaceAllUsesWith(ConstantInt::getNullValue(PTy));
     return true;
   }
+
+  if (!allCompatibleAddressPointPrevailing(DestTypeIdName))
+    return false;
 
   if (!doesAllAddressPointHaveDifferentVTable(NecessaryAddressPoints))
     return false;
@@ -283,9 +286,7 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
 }
 
 bool DynCastOPTPass::isOffsetToTopMustZero(StringRef Class) {
-  // TODO: for non-linear, if the desitination type is the primary base class of
-  // its super class, then the offset-to-top value is must 0.
-  if (!hasPrevailingVTables(Class))
+  if (!allCompatibleAddressPointPrevailing(Class))
     return false;
 
   auto Result = getTypeIdCompatibleVTableInfo(Class);

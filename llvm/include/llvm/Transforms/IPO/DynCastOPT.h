@@ -57,7 +57,7 @@ private:
   void collectVirtualTables(Module &M);
   bool doesAllAddressPointHaveDifferentVTable(std::vector<AddressPoint> AddressPoints);
 
-  bool hasPrevailingVTables(StringRef RTTIs);
+  bool allCompatibleAddressPointPrevailing(StringRef RTTIs);
 
   bool handleDynCastCallSite(CallInst *CI);
   Constant *getOffsetToTop(GlobalVariable *Super, uint64_t Offset);
