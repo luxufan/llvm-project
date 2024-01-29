@@ -20,10 +20,11 @@ define internal noundef ptr @_Z7dest_B1P1A(ptr noundef readonly %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[DYNAMIC_CAST_END:%.*]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       dynamic_cast.notnull:
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @__dynamic_cast(ptr nonnull [[A]], ptr nonnull @_ZTI1A, ptr nonnull @_ZTI2B1, i64 0)
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
 ; CHECK:       dynamic_cast.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ null, [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret ptr [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[TMP1]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
 entry:
   %0 = icmp eq ptr %a, null
@@ -47,10 +48,11 @@ define internal noundef ptr @_Z7dest_B2P1A(ptr noundef readonly %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[DYNAMIC_CAST_END:%.*]], label [[DYNAMIC_CAST_NOTNULL:%.*]]
 ; CHECK:       dynamic_cast.notnull:
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @__dynamic_cast(ptr nonnull [[A]], ptr nonnull @_ZTI1A, ptr nonnull @_ZTI2B2, i64 0)
 ; CHECK-NEXT:    br label [[DYNAMIC_CAST_END]]
 ; CHECK:       dynamic_cast.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ null, [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret ptr [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[TMP1]], [[DYNAMIC_CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
 entry:
   %0 = icmp eq ptr %a, null

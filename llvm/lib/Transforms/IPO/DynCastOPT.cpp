@@ -106,14 +106,6 @@ void DynCastOPTPass::buildTypeInfoGraph(Module &M) {
 }
 
 
-void DynCastOPTPass::getSuperClasses(StringRef Class, SetVector<StringRef> &Supers) {
-  auto VtableInfo = getTypeIdCompatibleVTableInfo(Class);
-  if (!VtableInfo)
-    return;
-  for (auto &I : *VtableInfo) {
-    Supers.insert(I.VTableName);
-  }
-}
 
 bool DynCastOPTPass::isUniqueBaseInFullCHA(StringRef C) {
   DenseSet<StringRef> Visited;
@@ -257,20 +249,21 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
 
   Type *PTy =
       PointerType::get(CI->getContext(), CI->getFunction()->getAddressSpace());
-  SetVector<StringRef> Supers;
-  getSuperClasses(DestTypeIdName, Supers);
+  auto CompatibleAddressPoints = getTypeIdCompatibleVTableInfo(DestTypeIdName);
+  if (!CompatibleAddressPoints)
+    return false;
+  std::vector<AddressPoint> NecessaryAddressPoints = *CompatibleAddressPoints;
 
   if (invalidToOptimize(DestGUID))
     return false;
 
-  if (Supers.empty()) {
+  if (NecessaryAddressPoints.empty()) {
     CI->replaceAllUsesWith(ConstantInt::getNullValue(PTy));
     return true;
   }
 
   if (!isUniqueBaseInFullCHA(DestTypeIdName))
     return false;
-
 
 
   SmallVector<std::pair<Constant *, Constant *>> CheckPoints;
@@ -289,24 +282,24 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   // superclasses by if the virtual table is used by other regular object file.
   // If it is not used and also not used in current LTO unit, then we can remove
   // the check for this class type.
-  if (Supers.size() > MaxSuperChecks)
+  if (NecessaryAddressPoints.size() > MaxSuperChecks)
     return false;
 
 
-  for (unsigned I = 0; I < Supers.size(); I++) {
-    GlobalVariable *VTableGV = M->getGlobalVariable(Supers[I], true);
+  for (unsigned I = 0; I < NecessaryAddressPoints.size(); I++) {
+    GlobalVariable *VTableGV = M->getGlobalVariable(NecessaryAddressPoints[I].VTableName, true);
     assert(VTableGV->hasInitializer());
 
     SmallVector<Constant *> Pointers;
     if (!getSplatPointers(VTableGV->getInitializer(), Pointers))
       assert(false);
 
-    std::string TypeIDName = convertFromZTVToZTS(Supers[I]);
-    uint64_t VTableOffset = getPrimaryAddressPoint(TypeIDName, Supers[I]);
+    std::string TypeIDName = convertFromZTVToZTS(NecessaryAddressPoints[I].VTableName);
+    uint64_t VTableOffset = getPrimaryAddressPoint(NecessaryAddressPoints[I].VTableName);
     Constant *AddressPoint = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Context), VTableGV,
                                 ConstantInt::get(Type::getInt64Ty(Context), VTableOffset));
 
-    Constant *Offset = computeOffset(DestTypeIdName, VTableGV);
+    Constant *Offset = computeOffset(VTableGV, NecessaryAddressPoints[I].Offset);
     CheckPoints.push_back(std::make_pair(
         AddressPoint, Offset));
   }
@@ -374,9 +367,7 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   return true;
 }
 
-Constant *DynCastOPTPass::computeOffset(StringRef BaseZTS, GlobalVariable *VTable) {
-
-  uint64_t Offset = getPrimaryAddressPoint(BaseZTS, VTable->getName());
+Constant *DynCastOPTPass::computeOffset(GlobalVariable *VTable, uint64_t Offset) {
   assert(VTable->hasInitializer());
   SmallVector<Constant *> Pointers;
   getSplatPointers(VTable->getInitializer(), Pointers);
@@ -419,7 +410,7 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
             ->getZExtValue();
 
       if (auto *TypeId = dyn_cast<MDString>(TypeID)) {
-        insertCompatibleAddressPoint(TypeId->getString(), GV.getName(), Offset);
+        insertTypeIdCompatibleAddressPoint(TypeId->getString(), GV.getName(), Offset);
       }
     }
   }

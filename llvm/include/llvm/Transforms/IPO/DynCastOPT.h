@@ -55,26 +55,26 @@ private:
   SetVector<GUID> ExternalReferenceRTTIs;
 
   using AddressPointsVector = std::vector<AddressPoint>;
-  std::map<StringRef, AddressPointsVector> TypeIdCompatibleInfo;
+  std::map<StringRef, AddressPointsVector> TypeIdCompatibleAddressPoints;
 
-  void insertCompatibleAddressPoint(StringRef TypeID, StringRef VTableName, uint64_t Offset) {
-    TypeIdCompatibleInfo[TypeID].push_back(AddressPoint(VTableName, Offset));
+  std::map<StringRef, uint64_t> PrimaryVTableAddressPoint;
+
+  void insertTypeIdCompatibleAddressPoint(StringRef TypeId, StringRef VTableName, uint64_t Offset) {
+    TypeIdCompatibleAddressPoints[TypeId].push_back(AddressPoint(VTableName, Offset));
+    if (VTableName.substr(4) == TypeId.substr(4))
+      PrimaryVTableAddressPoint.insert(std::make_pair(VTableName, Offset));
   }
 
   std::optional<AddressPointsVector> getTypeIdCompatibleVTableInfo(StringRef TypeID) {
-      auto Result = TypeIdCompatibleInfo.find(TypeID);
-      if (Result == TypeIdCompatibleInfo.end())
-        return std::nullopt;
-      return Result->second;
+    auto Result = TypeIdCompatibleAddressPoints.find(TypeID);
+    if (Result == TypeIdCompatibleAddressPoints.end())
+      return std::nullopt;
+    return Result->second;
   }
 
-  uint64_t getPrimaryAddressPoint(StringRef TypeID, StringRef VTableName) {
-    auto Info = getTypeIdCompatibleVTableInfo(TypeID);
-    assert(Info && "TypeID is not in map");
-    for (auto &I : *Info) {
-      if (I.VTableName == VTableName)
-        return I.Offset;
-    }
+  uint64_t getPrimaryAddressPoint(StringRef VTableName) {
+    assert(PrimaryVTableAddressPoint.count(VTableName));
+    return PrimaryVTableAddressPoint[VTableName];
   }
 
   void buildTypeInfoGraph(Module &M);
@@ -84,11 +84,8 @@ private:
 
   bool hasPrevailingVTables(StringRef RTTIs);
 
-  // Get all of the super classes of Base, also include itself.
-  void getSuperClasses(StringRef Base, SetVector<StringRef> &Supers);
-
   bool handleDynCastCallSite(CallInst *CI);
-  Constant *computeOffset(StringRef Base, GlobalVariable *Super);
+  Constant *computeOffset(GlobalVariable *Super, uint64_t Offset);
 
   // Invalidate the class hierarchy analysis if a class is not internal
   void invalidateExternalClass();
