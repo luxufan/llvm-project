@@ -12,6 +12,10 @@ STATISTIC(NumDynCast, "Number of dynamic_cast call site");
 STATISTIC(NumOptDynCastOffsetToTopMustZero,
           "Number of optimized dynamic_cast call site that has must zero "
           "offset to top value");
+STATISTIC(NumLeafNodes, "Number of dynamic_cast optimization that is leaf node");
+STATISTIC(NumTwoCandidates, "Number of dynamic_cast optimization that has two candidates");
+STATISTIC(NumThreeCandidates, "Number of dynamic_cast optimization that has three candidates");
+STATISTIC(NumMoreThanThreeCandidates, "Number of dyncast_cast optimization that has more than three candidates");
 
 using namespace llvm;
 
@@ -146,6 +150,20 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
   if (NecessaryAddressPoints.empty()) {
     CI->replaceAllUsesWith(ConstantInt::getNullValue(PTy));
     return true;
+  }
+
+  switch (NecessaryAddressPoints.size()) {
+    case 1:
+      NumLeafNodes++;
+      break;
+    case 2:
+      NumTwoCandidates++;
+      break;
+    case 3:
+      NumThreeCandidates++;
+      break;
+    default:
+      NumMoreThanThreeCandidates++;
   }
 
   if (!allCompatibleAddressPointPrevailing(DestTypeIdName))
