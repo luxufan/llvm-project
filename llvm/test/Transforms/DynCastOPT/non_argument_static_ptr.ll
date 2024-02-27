@@ -12,13 +12,13 @@ target triple = "aarch64-unknown-linux-gnu"
 @_ZTI2B1 = internal constant { ptr, ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), ptr @_ZTS2B1, ptr @_ZTI1A }, align 8
 @_ZTS2B2 = internal constant [4 x i8] c"2B2\00", align 1
 @_ZTI2B2 = internal constant { ptr, ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), ptr @_ZTS2B2, ptr @_ZTI1A }, align 8
-@_ZTV1C = internal unnamed_addr constant { [4 x ptr], [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1C, ptr null, ptr null], [4 x ptr] [ptr inttoptr (i64 -16 to ptr), ptr @_ZTI1C, ptr null, ptr null] }, align 8, !type !27, !type !28, !type !29, !type !30, !type !31
+@_ZTV1C = internal unnamed_addr constant { [4 x ptr], [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1C, ptr null, ptr null], [4 x ptr] [ptr inttoptr (i64 -16 to ptr), ptr @_ZTI1C, ptr null, ptr null] }, align 8, !type !27, !type !28, !type !29, !type !30, !type !31, !vcall_visibility !33
 @_ZTVN10__cxxabiv121__vmi_class_type_infoE = external global [0 x ptr]
 @_ZTS1C = internal constant [3 x i8] c"1C\00", align 1
 @_ZTI1C = internal constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64 } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), ptr @_ZTS1C, i32 1, i32 2, ptr @_ZTI2B1, i64 2, ptr @_ZTI2B2, i64 4098 }, align 8
-@_ZTV2B1 = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B1, ptr null, ptr null] }, align 8, !type !27, !type !30
-@_ZTV1A = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1A, ptr null, ptr null] }, align 8, !type !27
-@_ZTV2B2 = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B2, ptr null, ptr null] }, align 8, !type !27, !type !32
+@_ZTV2B1 = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B1, ptr null, ptr null] }, align 8, !type !27, !type !30, !vcall_visibility !33
+@_ZTV1A = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1A, ptr null, ptr null] }, align 8, !type !27, !vcall_visibility !33
+@_ZTV2B2 = internal unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B2, ptr null, ptr null] }, align 8, !type !27, !type !32, !vcall_visibility !33
 declare ptr @__dynamic_cast(ptr, ptr, ptr, i64)
 
 define internal ptr @_Z6dest_CP1A(ptr %a) {
@@ -180,6 +180,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 !30 = !{i64 16, !"_ZTS2B1"}
 !31 = !{i64 48, !"_ZTS2B2"}
 !32 = !{i64 16, !"_ZTS2B2"}
+!33 = !{i64 1}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

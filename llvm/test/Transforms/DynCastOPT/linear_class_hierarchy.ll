@@ -10,8 +10,8 @@ target triple = "aarch64-unknown-linux-gnu"
 @_ZTVN10__cxxabiv120__si_class_type_infoE = external global [0 x ptr]
 @_ZTS2B2 = internal constant [4 x i8] c"2B2\00", align 1
 @_ZTI2B2 = internal constant { ptr, ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), ptr @_ZTS2B2, ptr @_ZTI1A }, align 8
-@_ZTV2B2 = internal constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B2, ptr null, ptr null] }, align 8, !type !0, !type !1
-@_ZTV1C = internal constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1C, ptr null, ptr null] }, align 8, !type !0, !type !1, !type !2
+@_ZTV2B2 = internal constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI2B2, ptr null, ptr null] }, align 8, !type !0, !type !1, !vcall_visibility !3
+@_ZTV1C = internal constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr @_ZTI1C, ptr null, ptr null] }, align 8, !type !0, !type !1, !type !2, !vcall_visibility !3
 @_ZTS1C = internal constant [3 x i8] c"1C\00", align 1
 @_ZTI1C = internal constant { ptr, ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), ptr @_ZTS1C, ptr @_ZTI2B2 }, align 8
 
@@ -62,3 +62,4 @@ dynamic_cast.end:                                 ; preds = %dynamic_cast.notnul
 !0 = !{i64 16, !"_ZTS1A"}
 !1 = !{i64 16, !"_ZTS2B2"}
 !2 = !{i64 16, !"_ZTS1C"}
+!3 = !{i64 1}

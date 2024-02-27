@@ -2291,12 +2291,6 @@ bool DevirtModule::run() {
 
     removeRedundantTypeTests();
 
-    // We have lowered or deleted the type intrinsics, so we will no longer have
-    // enough information to reason about the liveness of virtual function
-    // pointers in GlobalDCE.
-    for (GlobalVariable &GV : M.globals())
-      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
-
     // The rest of the code is only necessary when exporting or during regular
     // LTO, so we are done.
     return true;
@@ -2432,12 +2426,6 @@ bool DevirtModule::run() {
   if (DidVirtualConstProp)
     for (VTableBits &B : Bits)
       rebuildGlobal(B);
-
-  // We have lowered or deleted the type intrinsics, so we will no longer have
-  // enough information to reason about the liveness of virtual function
-  // pointers in GlobalDCE.
-  for (GlobalVariable &GV : M.globals())
-    GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
 
   for (auto *CI : CallsWithPtrAuthBundleRemoved)
     CI->eraseFromParent();

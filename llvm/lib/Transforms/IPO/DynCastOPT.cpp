@@ -268,7 +268,6 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     Types.clear();
     GV.getMetadata(LLVMContext::MD_type, Types);
-    bool IsLocalLinkage = GV.isLocalLinkage(GV.getLinkage());
     for (MDNode *Type : Types) {
       auto TypeID = Type->getOperand(1).get();
       uint64_t Offset =
@@ -278,7 +277,7 @@ void DynCastOPTPass::collectVirtualTables(Module &M) {
 
       if (auto *TypeId = dyn_cast<MDString>(TypeID)) {
         insertTypeIdCompatibleAddressPoint(TypeId->getString(), GV.getName(), Offset);
-        if (!IsLocalLinkage)
+        if (GV.getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
           Invalids.insert(TypeId->getString());
       }
     }
@@ -323,9 +322,15 @@ PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {
       }
     }
   }
+
   for (auto *CI : Deleted) {
     CI->eraseFromParent();
     NumOptDynCast++;
   }
+
+  // Metadata vcall_visibility will no longer be used.
+  for (GlobalVariable &GV : M.globals())
+    GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
+
   return PreservedAnalyses::none();
 }
