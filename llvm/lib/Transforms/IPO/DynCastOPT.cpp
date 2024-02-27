@@ -327,19 +327,18 @@ PreservedAnalyses DynCastOPTPass::run(Module &M, ModuleAnalysisManager &) {
   //buildTypeInfoGraph(M);
   collectVirtualTables(M);
   SmallVector<CallInst *> Deleted;
-  for (Function &F : M.functions()) {
-    for (BasicBlock &BB : F) {
-      for (Instruction &I : BB) {
-        if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-          Function *Called = CI->getCalledFunction();
-          if (Called && Called->hasName() && Called->getName() == "__dynamic_cast") {
-            if (handleDynCastCallSite(CI))
-              Deleted.push_back(CI);
-          }
-        }
-      }
+  GlobalValue *DyncastDecl = M.getNamedValue("__dynamic_cast");
+  if (!DyncastDecl)
+    return PreservedAnalyses::all();
+  for (auto User : DyncastDecl->users()) {
+    if (CallInst *C = dyn_cast<CallInst>(User)) {
+      if (handleDynCastCallSite(C))
+        Deleted.push_back(C);
     }
   }
+
+  if (Deleted.empty())
+    return PreservedAnalyses::all();
 
   for (auto *CI : Deleted) {
     CI->eraseFromParent();
