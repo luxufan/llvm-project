@@ -9,7 +9,7 @@
 
 STATISTIC(NumOptDynCast, "Number of optimized dynamic_cast call site");
 STATISTIC(NumDynCast, "Number of dynamic_cast call site");
-STATISTIC(NumOptDynCastOffsetToTopMustZero,
+STATISTIC(NumOffsetToTopMustBeZero,
           "Number of optimized dynamic_cast call site that has must zero "
           "offset to top value");
 STATISTIC(NumLeafNodes, "Number of dynamic_cast optimization that is leaf node");
@@ -49,7 +49,7 @@ static Value *loadRuntimePtr(Value *StaticPtr, IRBuilder<> &IRB,
                              unsigned AddressSpace,
                              bool IsOffsetToTopMustZero) {
   if (IsOffsetToTopMustZero) {
-    NumOptDynCastOffsetToTopMustZero++;
+    NumOffsetToTopMustBeZero++;
     return StaticPtr;
   }
 
