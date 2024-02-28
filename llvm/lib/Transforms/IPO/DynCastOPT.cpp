@@ -124,8 +124,6 @@ bool DynCastOPTPass::handleDynCastCallSite(CallInst *CI) {
     CI->replaceAllUsesWith(StaticPtr);
     return true;
   }
-  if (!CI->getFunction()->isInternalLinkage(CI->getFunction()->getLinkage()))
-    return false;
 
   LLVMContext &Context = CI->getContext();
   Function *Called = CI->getCalledFunction();

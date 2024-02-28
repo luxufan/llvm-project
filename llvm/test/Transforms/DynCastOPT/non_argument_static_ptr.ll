@@ -156,11 +156,30 @@ dynamic_cast.end:                                 ; preds = %entry, %dynamic_cas
 
 define dso_local noundef i32 @main() {
 ; CHECK-LABEL: define dso_local noundef i32 @main() {
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  load_block:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias noundef nonnull dereferenceable(24) ptr @_Znwm(i64 noundef 24)
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(24) [[CALL]], i8 0, i64 24, i1 false)
 ; CHECK-NEXT:    store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1C, i64 0, inrange i32 0, i64 2), ptr [[CALL]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @__dynamic_cast(ptr nonnull [[CALL]], ptr nonnull @_ZTI1A, ptr nonnull @_ZTI2B1, i64 0)
+; CHECK-NEXT:    [[VPTR:%.*]] = load ptr, ptr [[CALL]], align 8
+; CHECK-NEXT:    [[ADD_OFFSET_TO_TOP:%.*]] = getelementptr inbounds i8, ptr [[VPTR]], i64 -16
+; CHECK-NEXT:    [[OFFSET_TO_TOP:%.*]] = load i64, ptr [[ADD_OFFSET_TO_TOP]], align 8
+; CHECK-NEXT:    [[RUNTIME_OBJECT:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 [[OFFSET_TO_TOP]]
+; CHECK-NEXT:    [[RUNTIME_VPTR:%.*]] = load ptr, ptr [[RUNTIME_OBJECT]], align 8
+; CHECK-NEXT:    br label [[CHECK_SUPER_0:%.*]]
+; CHECK:       check_super.0:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV1C, i64 16)
+; CHECK-NEXT:    br i1 [[TMP0]], label [[HANDLE_OFFSET:%.*]], label [[CHECK_SUPER_1:%.*]]
+; CHECK:       check_super.1:
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[RUNTIME_VPTR]], getelementptr (i8, ptr @_ZTV2B1, i64 16)
+; CHECK-NEXT:    br i1 [[TMP1]], label [[HANDLE_OFFSET]], label [[ENTRY:%.*]]
+; CHECK:       handle_offset:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ null, [[CHECK_SUPER_0]] ], [ null, [[CHECK_SUPER_1]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 0, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[RUNTIME_OBJECT]], i64 [[TMP4]]
+; CHECK-NEXT:    br label [[ENTRY]]
+; CHECK:       entry:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ null, [[CHECK_SUPER_1]] ], [ [[TMP5]], [[HANDLE_OFFSET]] ]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
