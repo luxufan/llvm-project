@@ -249,7 +249,7 @@ public:
 
   /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantIntVal;
+    return dynamic_cast<const ConstantInt *>(V);
   }
 };
 
@@ -324,7 +324,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantFPVal;
+    return dynamic_cast<const ConstantFP *>(V);
   }
 };
 
@@ -365,7 +365,7 @@ public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   ///
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantAggregateZeroVal;
+    return dynamic_cast<const ConstantAggregateZero *>(V);
   }
 };
 
@@ -390,8 +390,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() >= ConstantAggregateFirstVal &&
-           V->getValueID() <= ConstantAggregateLastVal;
+    return dynamic_cast<const ConstantAggregate *>(V);
   }
 };
 
@@ -429,7 +428,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantArrayVal;
+    return dynamic_cast<const ConstantArray *>(V);
   }
 };
 
@@ -481,7 +480,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantStructVal;
+    return dynamic_cast<const ConstantStruct *>(V);
   }
 };
 
@@ -522,7 +521,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantVectorVal;
+    return dynamic_cast<const ConstantVector *>(V);
   }
 };
 
@@ -551,7 +550,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantPointerNullVal;
+    return dynamic_cast<const ConstantPointerNull *>(V);
   }
 };
 
@@ -659,8 +658,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantDataArrayVal ||
-           V->getValueID() == ConstantDataVectorVal;
+    return dynamic_cast<const ConstantDataSequential *>(V);
   }
 
 private:
@@ -737,7 +735,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantDataArrayVal;
+    return dynamic_cast<const ConstantDataArray *>(V);
   }
 };
 
@@ -814,7 +812,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantDataVectorVal;
+    return dynamic_cast<const ConstantDataVector *>(V);
   }
 };
 
@@ -837,7 +835,7 @@ public:
 
   /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantTokenNoneVal;
+    return dynamic_cast<const ConstantTokenNone *>(V);
   }
 };
 
@@ -864,7 +862,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantTargetNoneVal;
+    return dynamic_cast<const ConstantTargetNone *>(V);
   }
 };
 
@@ -903,7 +901,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == BlockAddressVal;
+    return dynamic_cast<const BlockAddress *>(V);
   }
 };
 
@@ -941,7 +939,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == DSOLocalEquivalentVal;
+    return dynamic_cast<const DSOLocalEquivalent *>(V);
   }
 };
 
@@ -981,7 +979,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == NoCFIValueVal;
+    return dynamic_cast<const NoCFIValue *>(V);
   }
 };
 
@@ -1305,7 +1303,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == ConstantExprVal;
+    return dynamic_cast<const ConstantExpr *>(V);
   }
 
 private:
@@ -1368,8 +1366,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == UndefValueVal ||
-           V->getValueID() == PoisonValueVal;
+    return dynamic_cast<const UndefValue *>(V);
   }
 };
 
@@ -1410,7 +1407,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == PoisonValueVal;
+    return dynamic_cast<const PoisonValue *>(V);
   }
 };
 
