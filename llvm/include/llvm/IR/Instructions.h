@@ -152,11 +152,8 @@ public:
   void setSwiftError(bool V) { setSubclassData<SwiftErrorField>(V); }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return (I->getOpcode() == Instruction::Alloca);
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const AllocaInst *>(V);
   }
 
 private:
@@ -272,11 +269,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::Load;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const LoadInst *>(V);
   }
 
 private:
@@ -409,11 +403,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::Store;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const StoreInst *>(V);
   }
 
 private:
@@ -487,11 +478,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::Fence;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const FenceInst *>(V);
   }
 
 private:
@@ -687,11 +675,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::AtomicCmpXchg;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const AtomicCmpXchgInst *>(V);
   }
 
 private:

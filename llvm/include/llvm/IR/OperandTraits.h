@@ -150,7 +150,6 @@ template <int Idx_nocapture> const Use &CLASS::Op() const { \
   return this->OpFrom<Idx_nocapture>(this); \
 }
 
-
 } // End llvm namespace
 
 #endif
