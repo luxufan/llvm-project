@@ -4946,11 +4946,8 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == UIToFP;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const UIToFPInst *>(V);
   }
 };
 
@@ -4985,11 +4982,8 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == SIToFP;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const SIToFPInst *>(V);
   }
 };
 
@@ -5024,11 +5018,8 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == FPToUI;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const FPToUIInst *>(V);
   }
 };
 
@@ -5063,11 +5054,8 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == FPToSI;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const FPToSIInst *>(V);
   }
 };
 
@@ -5106,11 +5094,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == IntToPtr;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const IntToPtrInst *>(V);
   }
 };
 
@@ -5157,11 +5142,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == PtrToInt;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const PtrToIntInst *>(V);
   }
 };
 
@@ -5196,11 +5178,8 @@ public:
   );
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == BitCast;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const BitCastInst *>(V);
   }
 };
 
@@ -5236,11 +5215,8 @@ public:
   );
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == AddrSpaceCast;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const AddrSpaceCastInst *>(V);
   }
 
   /// Gets the pointer operand.
@@ -5367,11 +5343,8 @@ public:
   FreezeInst(Value *S, const Twine &NameStr, BasicBlock *InsertAtEnd);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
-    return I->getOpcode() == Freeze;
-  }
   static inline bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const FreezeInst *>(V);
   }
 };
 
