@@ -222,6 +222,10 @@ public:
     setSubclassData<AlignmentField>(Log2(Align));
   }
 
+  unsigned getValueID() const override {
+    return Load + Instruction::InstructionVal;
+  }
+
   /// Returns the ordering constraint of this load instruction.
   AtomicOrdering getOrdering() const {
     return getSubclassData<OrderingField>();
