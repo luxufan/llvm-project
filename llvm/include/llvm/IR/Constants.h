@@ -67,8 +67,7 @@ public:
 
   /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
-    return V->getValueID() >= ConstantDataFirstVal &&
-           V->getValueID() <= ConstantDataLastVal;
+    return dynamic_cast<const ConstantData *>(V);
   }
 };
 

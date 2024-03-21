@@ -193,6 +193,7 @@ public:
   Metadata *getMetadata() const { return MD; }
 
   static bool classof(const Value *V) {
+    return dynamic_cast<const MetadataAsValue *>(V);
     return V->getValueID() == MetadataAsValueVal;
   }
 

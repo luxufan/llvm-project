@@ -546,7 +546,7 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
-    return V->getValueID() == Value::BasicBlockVal;
+    return dynamic_cast<const BasicBlock *>(V);
   }
 
   /// Cause all subinstructions to "let go" of all the references that said
