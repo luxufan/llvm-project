@@ -69,7 +69,7 @@ Value::Value(Type *ty, unsigned scid)
            (/*SubclassID < ConstantFirstVal ||*/ SubclassID > ConstantLastVal))
     assert((VTy->isFirstClassType() || VTy->isVoidTy()) &&
            "Cannot create non-first-class values except for constants!");
-  static_assert(sizeof(Value) == 2 * sizeof(void *) + 2 * sizeof(unsigned),
+  static_assert(sizeof(Value) == 2 * sizeof(void *) + 2 * sizeof(unsigned) + 8,
                 "Value too big");
 }
 

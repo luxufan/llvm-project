@@ -33,7 +33,7 @@ public:
   // The Operator class is intended to be used as a utility, and is never itself
   // instantiated.
   Operator() = delete;
-  ~Operator() = delete;
+  ~Operator() override = default;
 
   void *operator new(size_t s) = delete;
 

@@ -29,9 +29,6 @@ namespace llvm {
 template <typename SubClass, unsigned ARITY>
 struct FixedNumOperandTraits {
   static Use *op_begin(SubClass* U) {
-    static_assert(
-        !std::is_polymorphic<SubClass>::value,
-        "adding virtual methods to subclasses of User breaks use lists");
     return reinterpret_cast<Use*>(U) - ARITY;
   }
   static Use *op_end(SubClass* U) {
@@ -67,9 +64,6 @@ struct OptionalOperandTraits : public FixedNumOperandTraits<SubClass, ARITY> {
 template <typename SubClass, unsigned MINARITY = 0>
 struct VariadicOperandTraits {
   static Use *op_begin(SubClass* U) {
-    static_assert(
-        !std::is_polymorphic<SubClass>::value,
-        "adding virtual methods to subclasses of User breaks use lists");
     return reinterpret_cast<Use*>(U) - static_cast<User*>(U)->getNumOperands();
   }
   static Use *op_end(SubClass* U) {

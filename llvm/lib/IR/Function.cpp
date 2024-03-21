@@ -443,6 +443,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
   // Ensure intrinsics have the right parameter attributes.
   // Note, the IntID field will have been set in Value::setName if this function
   // name is a valid intrinsic ID.
+  updateAfterNameChange();
   if (IntID)
     setAttributes(Intrinsic::getAttributes(getContext(), IntID));
 }

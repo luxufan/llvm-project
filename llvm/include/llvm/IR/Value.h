@@ -219,7 +219,7 @@ protected:
   /// duplicates the information in the value ID. As a size optimization, the
   /// destructor has been protected, and the caller should manually call
   /// deleteValue.
-  ~Value(); // Use deleteValue() to delete a generic Value.
+  virtual ~Value(); // Use deleteValue() to delete a generic Value.
 
 public:
   Value(const Value &) = delete;
