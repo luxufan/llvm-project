@@ -166,7 +166,7 @@ public:
   //// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     static_assert(ConstantFirstVal == 0, "V->getValueID() >= ConstantFirstVal always succeeds");
-    return V->getValueID() <= ConstantLastVal;
+    return dynamic_cast<const Constant *>(V);
   }
 
   /// This method is a special form of User::replaceUsesOfWith
