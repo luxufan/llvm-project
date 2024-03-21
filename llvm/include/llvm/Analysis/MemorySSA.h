@@ -321,6 +321,10 @@ public:
   void *operator new(size_t S) { return User::operator new(S, 1); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
+  unsigned getValueID() const override {
+    return MemoryUseVal;
+  }
+
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal;
   }
@@ -384,6 +388,10 @@ public:
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, 2); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
+  unsigned getValueID() const override {
+    return MemoryDefVal;
+  }
 
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
@@ -621,6 +629,10 @@ public:
   void unorderedDeleteIncomingValue(const MemoryAccess *MA) {
     unorderedDeleteIncomingIf(
         [&](const MemoryAccess *M, const BasicBlock *) { return MA == M; });
+  }
+
+  unsigned getValueID() const override {
+    return MemoryPhiVal;
   }
 
   static bool classof(const Value *V) {
