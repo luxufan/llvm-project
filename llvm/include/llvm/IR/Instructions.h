@@ -884,11 +884,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::AtomicRMW;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const AtomicRMWInst *>(V);
   }
 
 private:
@@ -1123,11 +1120,8 @@ public:
                      MapVector<Value *, APInt> &VariableOffsets,
                      APInt &ConstantOffset) const;
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return (I->getOpcode() == Instruction::GetElementPtr);
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const GetElementPtrInst *>(V);
   }
 };
 
@@ -1328,11 +1322,8 @@ public:
                       ICmpInst::Predicate Pred);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::ICmp;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const ICmpInst *>(V);
   }
 };
 
@@ -1444,11 +1435,8 @@ public:
                       FCmpInst::Predicate Pred);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::FCmp;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const FCmpInst *>(V);
   }
 };
 
@@ -1636,11 +1624,8 @@ public:
   void setCanReturnTwice() { addFnAttr(Attribute::ReturnsTwice); }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::Call;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const CallInst *>(V);
   }
 
   /// Updates profile metadata by scaling it by \p S / \p T.
@@ -1757,11 +1742,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::Select;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const SelectInst *>(V);
   }
 };
 
@@ -1803,11 +1785,8 @@ public:
   static unsigned getPointerOperandIndex() { return 0U; }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == VAArg;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const VAArgInst *>(V);
   }
 };
 
@@ -1860,11 +1839,8 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::ExtractElement;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const ExtractElementInst *>(V);
   }
 };
 
@@ -1923,11 +1899,8 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::InsertElement;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const InsertElementInst *>(V);
   }
 };
 
@@ -2425,11 +2398,8 @@ public:
                               unsigned &NumSubElts, unsigned &RotateAmt);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::ShuffleVector;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const ShuffleVectorInst *>(V);
   }
 };
 
@@ -2524,11 +2494,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::ExtractValue;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const ExtractValueInst *>(V);
   }
 };
 
