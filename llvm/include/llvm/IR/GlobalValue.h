@@ -658,10 +658,7 @@ public:
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    return V->getValueID() == Value::FunctionVal ||
-           V->getValueID() == Value::GlobalVariableVal ||
-           V->getValueID() == Value::GlobalAliasVal ||
-           V->getValueID() == Value::GlobalIFuncVal;
+    return dynamic_cast<const GlobalValue *>(V);
   }
 
   /// True if GV can be left out of the object symbol table. This is the case
