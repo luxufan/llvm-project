@@ -106,6 +106,10 @@ public:
     return getType()->getAddressSpace();
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Alloca;
+  }
+
   /// Get allocation size in bytes. Returns std::nullopt if size can't be
   /// determined, e.g. in case of a VLA.
   std::optional<TypeSize> getAllocationSize(const DataLayout &DL) const;
@@ -339,6 +343,9 @@ public:
   void *operator new(size_t S) { return User::operator new(S, 2); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Store;
+  }
   /// Return true if this is a store to a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }
 
@@ -456,6 +463,9 @@ public:
   FenceInst(LLVMContext &C, AtomicOrdering Ordering, SyncScope::ID SSID,
             BasicBlock *InsertAtEnd);
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Fence;
+  }
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, 0); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
@@ -536,6 +546,9 @@ public:
                     AtomicOrdering FailureOrdering, SyncScope::ID SSID,
                     BasicBlock *InsertAtEnd);
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + AtomicCmpXchg;
+  }
   // allocate space for exactly three operands
   void *operator new(size_t S) { return User::operator new(S, 3); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
@@ -793,6 +806,9 @@ public:
                 AtomicOrdering Ordering, SyncScope::ID SSID,
                 BasicBlock *InsertAtEnd);
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + AtomicRMW;
+  }
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, 2); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
@@ -999,6 +1015,9 @@ public:
     return GEP;
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + GetElementPtr;
+  }
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
@@ -1218,6 +1237,9 @@ public:
 #endif
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + ICmp;
+  }
   /// Constructor with no-insertion semantics
   ICmpInst(
     Predicate pred, ///< The predicate to use for the comparison
@@ -1370,6 +1392,9 @@ public:
     AssertOK();
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + FCmp;
+  }
   /// Constructor with insert-at-end semantics.
   FCmpInst(
     BasicBlock &InsertAtEnd, ///< Block to insert into.
@@ -1498,6 +1523,9 @@ public:
     return new (ComputeNumOperands(0)) CallInst(Ty, F, NameStr, InsertBefore);
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Call;
+  }
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                           const Twine &NameStr,
                           Instruction *InsertBefore = nullptr) {
@@ -1713,6 +1741,9 @@ public:
     return Sel;
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Select;
+  }
   static SelectInst *Create(Value *C, Value *S1, Value *S2,
                             const Twine &NameStr,
                             BasicBlock *InsertAtEnd) {
@@ -1778,6 +1809,9 @@ public:
     setName(NameStr);
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + VAArg;
+  }
   VAArgInst(Value *List, Type *Ty, const Twine &NameStr,
             BasicBlock *InsertAtEnd)
     : UnaryInstruction(Ty, VAArg, List, InsertAtEnd) {
@@ -1818,6 +1852,10 @@ public:
                                    const Twine &NameStr = "",
                                    Instruction *InsertBefore = nullptr) {
     return new(2) ExtractElementInst(Vec, Idx, NameStr, InsertBefore);
+  }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + ExtractElement;
   }
 
   static ExtractElementInst *Create(Value *Vec, Value *Idx,
@@ -1880,6 +1918,10 @@ public:
                                    const Twine &NameStr = "",
                                    Instruction *InsertBefore = nullptr) {
     return new(3) InsertElementInst(Vec, NewElt, Idx, NameStr, InsertBefore);
+  }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + InsertElement;
   }
 
   static InsertElementInst *Create(Value *Vec, Value *NewElt, Value *Idx,
@@ -1963,6 +2005,10 @@ public:
 
   void *operator new(size_t S) { return User::operator new(S, 2); }
   void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + ShuffleVector;
+  }
 
   /// Swap the operands and adjust the mask to preserve the semantics
   /// of the instruction.
@@ -2461,6 +2507,10 @@ public:
     return new ExtractValueInst(Agg, Idxs, NameStr, InsertAtEnd);
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + ExtractValue;
+  }
+
   /// Returns the type of the element that would be extracted
   /// with an extractvalue instruction with the specified parameters.
   ///
@@ -2566,6 +2616,10 @@ public:
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, 2); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + InsertValue;
+  }
 
   static InsertValueInst *Create(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> Idxs,
@@ -2713,6 +2767,10 @@ public:
                          const Twine &NameStr = "",
                          Instruction *InsertBefore = nullptr) {
     return new PHINode(Ty, NumReservedValues, NameStr, InsertBefore);
+  }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + PHI;
   }
 
   static PHINode *Create(Type *Ty, unsigned NumReservedValues,
@@ -2950,6 +3008,10 @@ protected:
 public:
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + LandingPad;
+  }
+
   /// Constructors - NumReservedClauses is a hint for the number of incoming
   /// clauses that this landingpad will have (use 0 if you really have no idea).
   static LandingPadInst *Create(Type *RetTy, unsigned NumReservedClauses,
@@ -3047,6 +3109,10 @@ public:
     return new(!!retVal) ReturnInst(C, retVal, InsertBefore);
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Ret;
+  }
+
   static ReturnInst* Create(LLVMContext &C, Value *retVal,
                             BasicBlock *InsertAtEnd) {
     return new(!!retVal) ReturnInst(C, retVal, InsertAtEnd);
@@ -3136,6 +3202,10 @@ public:
     BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
     BasicBlock *operator->() const { return operator*(); }
   };
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Br;
+  }
 
   /// The const version of `succ_op_iterator`.
   struct const_succ_op_iterator
@@ -3272,6 +3342,10 @@ protected:
 
 public:
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Switch;
+  }
 
   // -2
   static const unsigned DefaultPseudoIndex = static_cast<unsigned>(~0L-1);
@@ -3662,6 +3736,10 @@ protected:
 public:
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + IndirectBr;
+  }
+
   /// Iterator type that casts an operand to a basic block.
   ///
   /// This only makes sense because the successors are stored as adjacent
@@ -3812,6 +3890,10 @@ public:
     return new (NumOperands)
         InvokeInst(Ty, Func, IfNormal, IfException, Args, std::nullopt,
                    NumOperands, NameStr, InsertBefore);
+  }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Invoke;
   }
 
   static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
@@ -4017,6 +4099,10 @@ public:
                    NumOperands, NameStr, InsertBefore);
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + CallBr;
+  }
+
   static CallBrInst *
   Create(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
          ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
@@ -4217,6 +4303,10 @@ public:
     return new(1) ResumeInst(Exn, InsertAtEnd);
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Resume;
+  }
+
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
@@ -4299,6 +4389,10 @@ public:
                                  Instruction *InsertBefore = nullptr) {
     return new CatchSwitchInst(ParentPad, UnwindDest, NumHandlers, NameStr,
                                InsertBefore);
+  }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + CatchSwitch;
   }
 
   static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
@@ -4454,6 +4548,10 @@ public:
         CleanupPadInst(ParentPad, Args, Values, NameStr, InsertBefore);
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + CleanupPad;
+  }
+
   static CleanupPadInst *Create(Value *ParentPad, ArrayRef<Value *> Args,
                                 const Twine &NameStr, BasicBlock *InsertAtEnd) {
     unsigned Values = 1 + Args.size();
@@ -4505,6 +4603,10 @@ public:
         CatchPadInst(CatchSwitch, Args, Values, NameStr, InsertAtEnd);
   }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + CatchPad;
+  }
+
   /// Convenience accessors
   CatchSwitchInst *getCatchSwitch() const {
     return cast<CatchSwitchInst>(Op<-1>());
@@ -4543,6 +4645,10 @@ public:
     assert(CatchPad);
     assert(BB);
     return new (2) CatchReturnInst(CatchPad, BB, InsertBefore);
+  }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + CatchRet;
   }
 
   static CatchReturnInst *Create(Value *CatchPad, BasicBlock *BB,
@@ -4630,6 +4736,10 @@ public:
       ++Values;
     return new (Values)
         CleanupReturnInst(CleanupPad, UnwindBB, Values, InsertBefore);
+  }
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + CleanupRet;
   }
 
   static CleanupReturnInst *Create(Value *CleanupPad, BasicBlock *UnwindBB,
@@ -4724,6 +4834,10 @@ public:
 
   unsigned getNumSuccessors() const { return 0; }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Unreachable;
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return dynamic_cast<const UnreachableInst *>(V);
@@ -4769,6 +4883,10 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Trunc;
+  }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return dynamic_cast<const TruncInst *>(V);
@@ -4796,6 +4914,10 @@ public:
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + ZExt;
+  }
 
   /// Constructor with insert-at-end semantics.
   ZExtInst(
@@ -4833,6 +4955,10 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + SExt;
+  }
+
   /// Constructor with insert-at-end-of-block semantics
   SExtInst(
     Value *S,                     ///< The value to be sign extended
@@ -4868,6 +4994,10 @@ public:
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + FPTrunc;
+  }
 
   /// Constructor with insert-before-instruction semantics
   FPTruncInst(
@@ -4905,6 +5035,10 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + FPExt;
+  }
+
   /// Constructor with insert-at-end-of-block semantics
   FPExtInst(
     Value *S,                     ///< The value to be extended
@@ -4940,6 +5074,10 @@ public:
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + UIToFP;
+  }
 
   /// Constructor with insert-at-end-of-block semantics
   UIToFPInst(
@@ -4977,6 +5115,10 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + SIToFP;
+  }
+
   /// Constructor with insert-at-end-of-block semantics
   SIToFPInst(
     Value *S,                     ///< The value to be converted
@@ -5012,6 +5154,10 @@ public:
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + FPToUI;
+  }
 
   /// Constructor with insert-at-end-of-block semantics
   FPToUIInst(
@@ -5049,6 +5195,10 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + FPToSI;
+  }
+
   /// Constructor with insert-at-end-of-block semantics
   FPToSIInst(
     Value *S,                     ///< The value to be converted
@@ -5080,6 +5230,10 @@ public:
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + IntToPtr;
+  }
 
   /// Constructor with insert-at-end-of-block semantics
   IntToPtrInst(
@@ -5124,6 +5278,10 @@ public:
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + PtrToInt;
+  }
 
   /// Constructor with insert-at-end-of-block semantics
   PtrToIntInst(
@@ -5173,6 +5331,10 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + BitCast;
+  }
+
   /// Constructor with insert-at-end-of-block semantics
   BitCastInst(
     Value *S,                     ///< The value to be casted
@@ -5209,6 +5371,10 @@ public:
     const Twine &NameStr = "",          ///< A name for the new instruction
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + AddrSpaceCast;
+  }
 
   /// Constructor with insert-at-end-of-block semantics
   AddrSpaceCastInst(
@@ -5345,6 +5511,10 @@ public:
                       const Twine &NameStr = "",
                       Instruction *InsertBefore = nullptr);
   FreezeInst(Value *S, const Twine &NameStr, BasicBlock *InsertAtEnd);
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Freeze;
+  }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Value *V) {
