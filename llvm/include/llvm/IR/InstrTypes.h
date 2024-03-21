@@ -73,16 +73,8 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->isUnaryOp() ||
-           I->getOpcode() == Instruction::Alloca ||
-           I->getOpcode() == Instruction::Load ||
-           I->getOpcode() == Instruction::VAArg ||
-           I->getOpcode() == Instruction::ExtractValue ||
-           (I->getOpcode() >= CastOpsBegin && I->getOpcode() < CastOpsEnd);
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const UnaryInstruction *>(V);
   }
 };
 
@@ -172,11 +164,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->isUnaryOp();
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const UnaryOperator *>(V);
   }
 };
 
@@ -411,11 +400,8 @@ public:
   bool swapOperands();
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->isBinaryOp();
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const BinaryOperator *>(V);
   }
 };
 
@@ -739,11 +725,8 @@ public:
   }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->isCast();
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const CastInst *>(V);
   }
 };
 
@@ -1115,12 +1098,8 @@ public:
   static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::ICmp ||
-           I->getOpcode() == Instruction::FCmp;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const CmpInst *>(V);
   }
 
   /// Create a result type for fcmp/icmp
@@ -1327,13 +1306,8 @@ public:
   static CallBase *removeOperandBundle(CallBase *CB, uint32_t ID,
                                        Instruction *InsertPt = nullptr);
 
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::Call ||
-           I->getOpcode() == Instruction::Invoke ||
-           I->getOpcode() == Instruction::CallBr;
-  }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const CallBase *>(V);
   }
 
   FunctionType *getFunctionType() const { return FTy; }
@@ -2440,9 +2414,8 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) { return I->isFuncletPad(); }
   static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return dynamic_cast<const FuncletPadInst *>(V);
   }
 };
 
