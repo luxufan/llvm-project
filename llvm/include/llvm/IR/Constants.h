@@ -98,6 +98,10 @@ public:
   /// value. Otherwise return a ConstantInt for the given value.
   static Constant *get(Type *Ty, uint64_t V, bool IsSigned = false);
 
+  unsigned getValueID() const override {
+    return ConstantIntVal;
+  }
+
   /// Return a ConstantInt with the specified integer value for the specified
   /// type. If the type is wider than 64 bits, the value will be zero-extended
   /// to fit the type, unless IsSigned is true, in which case the value will
@@ -268,6 +272,10 @@ class ConstantFP final : public ConstantData {
 public:
   ConstantFP(const ConstantFP &) = delete;
 
+  unsigned getValueID() const override {
+    return ConstantFPVal;
+  }
+
   /// This returns a ConstantFP, or a vector containing a splat of a ConstantFP,
   /// for the specified value in the specified type. This should only be used
   /// for simple constant values like 2.0/1.0 etc, that are known-valid both as
@@ -341,6 +349,10 @@ class ConstantAggregateZero final : public ConstantData {
 
 public:
   ConstantAggregateZero(const ConstantAggregateZero &) = delete;
+
+  unsigned getValueID() const override {
+    return ConstantAggregateZeroVal;
+  }
 
   static ConstantAggregateZero *get(Type *Ty);
 
@@ -416,6 +428,10 @@ public:
   // ConstantArray accessors
   static Constant *get(ArrayType *T, ArrayRef<Constant *> V);
 
+  unsigned getValueID() const override {
+    return ConstantArrayVal;
+  }
+
 private:
   static Constant *getImpl(ArrayType *T, ArrayRef<Constant *> V);
 
@@ -452,6 +468,10 @@ public:
   static std::enable_if_t<are_base_of<Constant, Csts...>::value, Constant *>
   get(StructType *T, Csts *...Vs) {
     return get(T, ArrayRef<Constant *>({Vs...}));
+  }
+
+  unsigned getValueID() const override {
+    return ConstantStructVal;
   }
 
   /// Return an anonymous struct that has the specified elements.
@@ -500,6 +520,10 @@ public:
   // ConstantVector accessors
   static Constant *get(ArrayRef<Constant *> V);
 
+  unsigned getValueID() const override {
+    return ConstantVectorVal;
+  }
+
 private:
   static Constant *getImpl(ArrayRef<Constant *> V);
 
@@ -538,6 +562,10 @@ class ConstantPointerNull final : public ConstantData {
 
 public:
   ConstantPointerNull(const ConstantPointerNull &) = delete;
+
+  unsigned getValueID() const override {
+    return ConstantPointerNullVal;
+  }
 
   /// Static factory methods - Return objects of the specified value
   static ConstantPointerNull *get(PointerType *T);
@@ -680,6 +708,10 @@ class ConstantDataArray final : public ConstantDataSequential {
 public:
   ConstantDataArray(const ConstantDataArray &) = delete;
 
+  unsigned getValueID() const override {
+    return ConstantDataArrayVal;
+  }
+
   /// get() constructor - Return a constant with array type with an element
   /// count and element type matching the ArrayRef passed in.  Note that this
   /// can return a ConstantAggregateZero object.
@@ -759,6 +791,10 @@ class ConstantDataVector final : public ConstantDataSequential {
 public:
   ConstantDataVector(const ConstantDataVector &) = delete;
 
+  unsigned getValueID() const override {
+    return ConstantDataVectorVal;
+  }
+
   /// get() constructors - Return a constant with vector type with an element
   /// count and element type matching the ArrayRef passed in.  Note that this
   /// can return a ConstantAggregateZero object.
@@ -830,6 +866,10 @@ class ConstantTokenNone final : public ConstantData {
 public:
   ConstantTokenNone(const ConstantTokenNone &) = delete;
 
+  unsigned getValueID() const override {
+    return ConstantTokenNoneVal;
+  }
+
   /// Return the ConstantTokenNone.
   static ConstantTokenNone *get(LLVMContext &Context);
 
@@ -860,6 +900,10 @@ public:
     return cast<TargetExtType>(Value::getType());
   }
 
+  unsigned getValueID() const override {
+    return ConstantTokenNoneVal;
+  }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
     return dynamic_cast<const ConstantTargetNone *>(V);
@@ -880,6 +924,10 @@ class BlockAddress final : public Constant {
 
 public:
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
+  unsigned getValueID() const override {
+    return BlockAddressVal;
+  }
 
   /// Return a BlockAddress for the specified function and basic block.
   static BlockAddress *get(Function *F, BasicBlock *BB);
@@ -927,6 +975,10 @@ class DSOLocalEquivalent final : public Constant {
 public:
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
+  unsigned getValueID() const override {
+    return DSOLocalEquivalentVal;
+  }
+
   /// Return a DSOLocalEquivalent for the specified global value.
   static DSOLocalEquivalent *get(GlobalValue *GV);
 
@@ -964,6 +1016,10 @@ class NoCFIValue final : public Constant {
 public:
   /// Return a NoCFIValue for the specified function.
   static NoCFIValue *get(GlobalValue *GV);
+
+  unsigned getValueID() const override {
+    return NoCFIValueVal;
+  }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -1027,6 +1083,10 @@ public:
   /// type is an i64).
   ///
   static Constant *getSizeOf(Type *Ty);
+
+  unsigned getValueID() const override {
+    return ConstantExprVal;
+  }
 
   static Constant *getNeg(Constant *C, bool HasNUW = false,
                           bool HasNSW = false);

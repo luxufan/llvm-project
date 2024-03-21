@@ -74,6 +74,10 @@ public:
     dropAllReferences();
   }
 
+  unsigned getValueID() const override {
+    return GlobalVariableVal;
+  }
+
   // allocate space for exactly one operand
   void *operator new(size_t s) {
     return User::operator new(s, 1);

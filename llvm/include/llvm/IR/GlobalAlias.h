@@ -34,6 +34,9 @@ class GlobalAlias : public GlobalValue, public ilist_node<GlobalAlias> {
 public:
   GlobalAlias(const GlobalAlias &) = delete;
   GlobalAlias &operator=(const GlobalAlias &) = delete;
+  unsigned getValueID() const override {
+    return GlobalAliasVal;
+  }
 
   /// If a parent module is specified, the alias is automatically inserted into
   /// the end of the specified module's alias list.

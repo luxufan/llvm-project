@@ -55,11 +55,8 @@ public:
 
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  static bool classof(const ConstantExpr *CE) {
-    return Instruction::isCast(CE->getOpcode());
-  }
   static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
+    return dynamic_cast<const CastConstantExpr *>(V);
   }
 };
 
@@ -82,11 +79,8 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  static bool classof(const ConstantExpr *CE) {
-    return Instruction::isBinaryOp(CE->getOpcode());
-  }
   static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
+    return dynamic_cast<const BinaryConstantExpr *>(V);
   }
 };
 
@@ -109,11 +103,8 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Instruction::ExtractElement;
-  }
   static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
+    return dynamic_cast<const ExtractElementConstantExpr *>(V);
   }
 };
 
@@ -137,11 +128,8 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Instruction::InsertElement;
-  }
   static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
+    return dynamic_cast<const InsertElementConstantExpr *>(V);
   }
 };
 
@@ -173,11 +161,8 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Instruction::ShuffleVector;
-  }
   static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
+    return dynamic_cast<const ShuffleVectorConstantExpr *>(V);
   }
 };
 
@@ -210,7 +195,7 @@ public:
     return CE->getOpcode() == Instruction::GetElementPtr;
   }
   static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
+    return dynamic_cast<const GetElementPtrConstantExpr *>(V);
   }
 };
 
@@ -234,12 +219,8 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Instruction::ICmp ||
-           CE->getOpcode() == Instruction::FCmp;
-  }
   static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
+    return dynamic_cast<const CompareConstantExpr *>(V);
   }
 };
 

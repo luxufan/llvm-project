@@ -63,6 +63,10 @@ class LLVM_EXTERNAL_VISIBILITY Function : public GlobalObject,
 public:
   using BasicBlockListType = SymbolTableList<BasicBlock>;
 
+  unsigned getValueID() const override {
+    return FunctionVal;
+  }
+
   // BasicBlock iterators...
   using iterator = BasicBlockListType::iterator;
   using const_iterator = BasicBlockListType::const_iterator;
