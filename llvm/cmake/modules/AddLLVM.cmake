@@ -1534,7 +1534,7 @@ macro(add_custom_linker_flags name)
   if (LLVM_${name}_LINKER_FLAGS)
     separate_arguments(flags UNIX_COMMAND "${LLVM_${name}_LINKER_FLAGS}")
     message(DEBUG "Applying ${flags} to ${name}")
-    target_link_options(${name} PRIVATE ${name})
+    target_link_options(${name} PRIVATE ${flags})
   endif()
 endmacro()
 
