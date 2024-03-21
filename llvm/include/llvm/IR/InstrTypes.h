@@ -2390,6 +2390,8 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CallBase, Value)
 class FuncletPadInst : public Instruction {
 private:
   FuncletPadInst(const FuncletPadInst &CPI);
+  FuncletPadInst(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
+              Instruction *InsertBefore = nullptr);
 
   explicit FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
                           ArrayRef<Value *> Args, unsigned Values,
@@ -2401,12 +2403,8 @@ private:
   void init(Value *ParentPad, ArrayRef<Value *> Args, const Twine &NameStr);
 
 protected:
-  // Note: Instruction needs to be a friend here to call cloneImpl.
-  friend class Instruction;
   friend class CatchPadInst;
   friend class CleanupPadInst;
-
-  FuncletPadInst *cloneImpl() const;
 
 public:
   /// Provide fast operand accessors

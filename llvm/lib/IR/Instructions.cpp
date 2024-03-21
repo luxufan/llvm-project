@@ -1179,6 +1179,10 @@ FuncletPadInst::FuncletPadInst(const FuncletPadInst &FPI)
   setParentPad(FPI.getParentPad());
 }
 
+FuncletPadInst::FuncletPadInst(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
+                               Instruction *InsertBefore)
+    : Instruction(Ty, iType, Ops, NumOps, InsertBefore) {}
+
 FuncletPadInst::FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
                                ArrayRef<Value *> Args, unsigned Values,
                                const Twine &NameStr, Instruction *InsertBefore)
@@ -1197,6 +1201,21 @@ FuncletPadInst::FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
   init(ParentPad, Args, NameStr);
 }
 
+CleanupPadInst::CleanupPadInst(const CleanupPadInst &CPI)
+: FuncletPadInst(CPI.getType(), Instruction::CleanupPad,
+                 OperandTraits<FuncletPadInst>::op_end(this) - CPI.getNumOperands(),
+                 CPI.getNumOperands()) {
+  std::copy(CPI.op_begin(), CPI.op_end(), op_begin());
+  setParentPad(CPI.getParentPad());
+}
+
+CatchPadInst::CatchPadInst(const CatchPadInst &CPI)
+: FuncletPadInst(CPI.getType(), Instruction::CatchPad,
+                 OperandTraits<FuncletPadInst>::op_end(this) - CPI.getNumOperands(),
+                 CPI.getNumOperands()) {
+  std::copy(CPI.op_begin(), CPI.op_end(), op_begin());
+  setParentPad(CPI.getParentPad());
+}
 //===----------------------------------------------------------------------===//
 //                      UnreachableInst Implementation
 //===----------------------------------------------------------------------===//
@@ -4971,8 +4990,12 @@ CatchSwitchInst *CatchSwitchInst::cloneImpl() const {
   return new CatchSwitchInst(*this);
 }
 
-FuncletPadInst *FuncletPadInst::cloneImpl() const {
-  return new (getNumOperands()) FuncletPadInst(*this);
+CleanupPadInst *CleanupPadInst::cloneImpl() const {
+  return new (getNumOperands()) CleanupPadInst(*this);
+}
+
+CatchPadInst *CatchPadInst::cloneImpl() const {
+  return new (getNumOperands()) CatchPadInst(*this);
 }
 
 UnreachableInst *UnreachableInst::cloneImpl() const {

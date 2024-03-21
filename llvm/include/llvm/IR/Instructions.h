@@ -4423,6 +4423,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CatchSwitchInst, Value)
 //===----------------------------------------------------------------------===//
 class CleanupPadInst : public FuncletPadInst {
 private:
+  CleanupPadInst(const CleanupPadInst &);
   explicit CleanupPadInst(Value *ParentPad, ArrayRef<Value *> Args,
                           unsigned Values, const Twine &NameStr,
                           Instruction *InsertBefore)
@@ -4433,6 +4434,11 @@ private:
                           BasicBlock *InsertAtEnd)
       : FuncletPadInst(Instruction::CleanupPad, ParentPad, Args, Values,
                        NameStr, InsertAtEnd) {}
+
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+  CleanupPadInst *cloneImpl() const;
 
 public:
   static CleanupPadInst *Create(Value *ParentPad,
@@ -4462,6 +4468,7 @@ public:
 //===----------------------------------------------------------------------===//
 class CatchPadInst : public FuncletPadInst {
 private:
+  CatchPadInst(const CatchPadInst &);
   explicit CatchPadInst(Value *CatchSwitch, ArrayRef<Value *> Args,
                         unsigned Values, const Twine &NameStr,
                         Instruction *InsertBefore)
@@ -4472,6 +4479,11 @@ private:
                         BasicBlock *InsertAtEnd)
       : FuncletPadInst(Instruction::CatchPad, CatchSwitch, Args, Values,
                        NameStr, InsertAtEnd) {}
+
+protected:
+
+  friend class Instruction;
+  CatchPadInst *cloneImpl() const;
 
 public:
   static CatchPadInst *Create(Value *CatchSwitch, ArrayRef<Value *> Args,
