@@ -77,6 +77,10 @@ public:
   DPMarker *createMarker(Instruction *I);
   DPMarker *createMarker(InstListType::iterator It);
 
+  unsigned getValueID() const override {
+    return BasicBlockVal;
+  }
+
   /// Convert variable location debugging information stored in dbg.value
   /// intrinsics into DPMarker / DPValue records. Deletes all dbg.values in
   /// the process and sets IsNewDbgInfoFormat = true. Only takes effect if

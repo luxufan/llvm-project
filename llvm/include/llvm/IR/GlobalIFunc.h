@@ -39,6 +39,9 @@ class GlobalIFunc final : public GlobalObject, public ilist_node<GlobalIFunc> {
 
 public:
   GlobalIFunc(const GlobalIFunc &) = delete;
+  ~GlobalIFunc() {
+    removeDeadConstantUsers();   // remove any dead constants using this.
+  }
   GlobalIFunc &operator=(const GlobalIFunc &) = delete;
 
   /// If a parent module is specified, the ifunc is automatically inserted into
@@ -92,7 +95,6 @@ public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return dynamic_cast<const GlobalIFunc *>(V);
-    return V->getValueID() == Value::GlobalIFuncVal;
   }
 
   // Apply specific operation to all resolver-related values. If resolver target

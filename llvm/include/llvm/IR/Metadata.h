@@ -187,6 +187,10 @@ class MetadataAsValue : public Value {
 public:
   ~MetadataAsValue();
 
+  unsigned getValueID() const override {
+    return MetadataAsValueVal;
+  }
+
   static MetadataAsValue *get(LLVMContext &Context, Metadata *MD);
   static MetadataAsValue *getIfExists(LLVMContext &Context, Metadata *MD);
 
@@ -194,7 +198,6 @@ public:
 
   static bool classof(const Value *V) {
     return dynamic_cast<const MetadataAsValue *>(V);
-    return V->getValueID() == MetadataAsValueVal;
   }
 
 private:

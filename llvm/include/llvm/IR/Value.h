@@ -530,7 +530,7 @@ public:
   /// # the InstructionVal enumerator must be the highest valued enumerator in
   ///   the ValueTy enum.
   virtual unsigned getValueID() const {
-    return SubclassID;
+    return 255;
   }
 
   /// Return the raw optional flags value contained in this value.

@@ -2826,6 +2826,7 @@ UnaryOperator::UnaryOperator(UnaryOps iType, Value *S,
                              Instruction *InsertBefore)
   : UnaryInstruction(Ty, iType, S, InsertBefore) {
   Op<0>() = S;
+  Opcode = iType;
   setName(Name);
   AssertOK();
 }
@@ -2835,6 +2836,7 @@ UnaryOperator::UnaryOperator(UnaryOps iType, Value *S,
                              BasicBlock *InsertAtEnd)
   : UnaryInstruction(Ty, iType, S, InsertAtEnd) {
   Op<0>() = S;
+  Opcode = iType;
   setName(Name);
   AssertOK();
 }
@@ -2857,7 +2859,7 @@ void UnaryOperator::AssertOK() {
   Value *LHS = getOperand(0);
   (void)LHS; // Silence warnings.
 #ifndef NDEBUG
-  switch (getOpcode()) {
+  switch (Opcode) {
   case FNeg:
     assert(getType() == LHS->getType() &&
            "Unary operation should return same type as operand!");
@@ -2883,6 +2885,7 @@ BinaryOperator::BinaryOperator(BinaryOps iType, Value *S1, Value *S2,
                 InsertBefore) {
   Op<0>() = S1;
   Op<1>() = S2;
+  Opcode = iType;
   setName(Name);
   AssertOK();
 }
@@ -2896,6 +2899,7 @@ BinaryOperator::BinaryOperator(BinaryOps iType, Value *S1, Value *S2,
                 InsertAtEnd) {
   Op<0>() = S1;
   Op<1>() = S2;
+  Opcode = iType;
   setName(Name);
   AssertOK();
 }
@@ -2906,7 +2910,7 @@ void BinaryOperator::AssertOK() {
   assert(LHS->getType() == RHS->getType() &&
          "Binary operator operand types must match!");
 #ifndef NDEBUG
-  switch (getOpcode()) {
+  switch (Opcode) {
   case Add: case Sub:
   case Mul:
     assert(getType() == LHS->getType() &&

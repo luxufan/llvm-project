@@ -61,6 +61,10 @@ public:
   InlineAsm(const InlineAsm &) = delete;
   InlineAsm &operator=(const InlineAsm &) = delete;
 
+  unsigned getValueID() const override {
+    return InlineAsmVal;
+  }
+
   /// InlineAsm::get - Return the specified uniqued inline asm string.
   ///
   static InlineAsm *get(FunctionType *Ty, StringRef AsmString,

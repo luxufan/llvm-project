@@ -72,6 +72,7 @@ public:
 
   ~GlobalVariable() {
     dropAllReferences();
+    removeDeadConstantUsers();   // remove any dead constants using this.
   }
 
   unsigned getValueID() const override {

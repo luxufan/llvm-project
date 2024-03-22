@@ -91,6 +91,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UnaryInstruction, Value)
 
 class UnaryOperator : public UnaryInstruction {
   void AssertOK();
+  UnaryOps Opcode;
 
 protected:
   UnaryOperator(UnaryOps iType, Value *S, Type *Ty,
@@ -121,6 +122,10 @@ public:
   static UnaryOperator *Create(UnaryOps Op, Value *S,
                                const Twine &Name,
                                BasicBlock *InsertAtEnd);
+
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Opcode;
+  }
 
   /// These methods just forward to Create, and are useful when you
   /// statically know what type of instruction you're going to create.  These
@@ -160,7 +165,7 @@ public:
   }
 
   UnaryOps getOpcode() const {
-    return static_cast<UnaryOps>(Instruction::getOpcode());
+    return Opcode;
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -175,6 +180,7 @@ public:
 
 class BinaryOperator : public Instruction {
   void AssertOK();
+  BinaryOps Opcode;
 
 protected:
   BinaryOperator(BinaryOps iType, Value *S1, Value *S2, Type *Ty,
@@ -192,6 +198,9 @@ public:
   void *operator new(size_t S) { return User::operator new(S, 2); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
+  unsigned getValueID() const override {
+    return Instruction::InstructionVal + Opcode;
+  }
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 

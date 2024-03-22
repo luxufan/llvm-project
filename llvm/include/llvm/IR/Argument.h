@@ -37,6 +37,10 @@ public:
   explicit Argument(Type *Ty, const Twine &Name = "", Function *F = nullptr,
                     unsigned ArgNo = 0);
 
+  unsigned getValueID() const override {
+    return ArgumentVal;
+  }
+
   inline const Function *getParent() const { return Parent; }
   inline       Function *getParent()       { return Parent; }
 

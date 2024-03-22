@@ -457,6 +457,7 @@ Function::~Function() {
 
   // Remove the function from the on-the-side GC table.
   clearGC();
+  removeDeadConstantUsers();   // remove any dead constants using this.
 }
 
 void Function::BuildLazyArguments() const {

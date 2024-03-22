@@ -188,7 +188,6 @@ protected:
   }
 
   ~GlobalValue() {
-    removeDeadConstantUsers();   // remove any dead constants using this.
   }
 
 public:
