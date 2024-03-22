@@ -86,7 +86,6 @@ protected:
         HasLLVMReservedName(false), IsDSOLocal(false), HasPartition(false),
         HasSanitizerMetadata(false) {
     setLinkage(Linkage);
-    setName(Name);
   }
 
   Type *ValueType;

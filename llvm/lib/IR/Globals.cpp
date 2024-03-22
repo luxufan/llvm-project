@@ -511,6 +511,7 @@ GlobalAlias::GlobalAlias(Type *Ty, unsigned AddressSpace, LinkageTypes Link,
                          Module *ParentModule)
     : GlobalValue(Ty, Value::GlobalAliasVal, &Op<0>(), 1, Link, Name,
                   AddressSpace) {
+  setName(Name);
   setAliasee(Aliasee);
   if (ParentModule)
     ParentModule->insertAlias(this);

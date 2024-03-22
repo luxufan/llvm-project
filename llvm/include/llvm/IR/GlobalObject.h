@@ -45,6 +45,7 @@ protected:
                unsigned AddressSpace = 0)
       : GlobalValue(Ty, VTy, Ops, NumOps, Linkage, Name, AddressSpace) {
     setGlobalValueSubClassData(0);
+    setName(Name);
   }
   ~GlobalObject();
 
