@@ -254,7 +254,7 @@ class ValueMapCallbackVH final : public CallbackVH {
   ValueMapCallbackVH(Value *V) : CallbackVH(V), Map(nullptr) {}
 
 public:
-  KeyT Unwrap() const { return cast_or_null<KeySansPointerT>(getValPtr()); }
+  KeyT Unwrap() const { return (KeyT)(getValPtr()); }
 
   void deleted() override {
     // Make a copy that won't get changed even when *this is destroyed.
