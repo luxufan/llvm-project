@@ -424,6 +424,7 @@ GlobalVariable::GlobalVariable(Type *Ty, bool constant, LinkageTypes Link,
       isExternallyInitializedConstant(isExternallyInitialized) {
   assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
          "invalid type for global variable");
+  setName(Name);
   setThreadLocalMode(TLMode);
   if (InitVal) {
     assert(InitVal->getType() == Ty &&
@@ -569,6 +570,7 @@ GlobalIFunc::GlobalIFunc(Type *Ty, unsigned AddressSpace, LinkageTypes Link,
                          Module *ParentModule)
     : GlobalObject(Ty, Value::GlobalIFuncVal, &Op<0>(), 1, Link, Name,
                    AddressSpace) {
+  setName(Name);
   setResolver(Resolver);
   if (ParentModule)
     ParentModule->insertIFunc(this);
