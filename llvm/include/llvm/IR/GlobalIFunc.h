@@ -39,9 +39,15 @@ class GlobalIFunc final : public GlobalObject, public ilist_node<GlobalIFunc> {
 
 public:
   GlobalIFunc(const GlobalIFunc &) = delete;
+
   ~GlobalIFunc() {
     removeDeadConstantUsers();   // remove any dead constants using this.
   }
+
+  unsigned getValueID() const override {
+    return GlobalIFuncVal;
+  }
+
   GlobalIFunc &operator=(const GlobalIFunc &) = delete;
 
   /// If a parent module is specified, the ifunc is automatically inserted into

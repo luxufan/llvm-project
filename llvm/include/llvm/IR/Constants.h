@@ -1403,6 +1403,9 @@ protected:
 public:
   UndefValue(const UndefValue &) = delete;
 
+  unsigned getValueID() const override {
+    return UndefValueVal;
+  }
   /// Static factory methods - Return an 'undef' object of the specified type.
   static UndefValue *get(Type *T);
 
