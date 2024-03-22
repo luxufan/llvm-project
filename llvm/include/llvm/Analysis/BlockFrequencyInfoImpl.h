@@ -1086,7 +1086,7 @@ public:
   virtual ~BFICallbackVH() = default;
 
   void deleted() override {
-    BFIImpl->forgetBlock(cast<BasicBlock>(getValPtr()));
+    BFIImpl->forgetBlock((BasicBlock *)(getValPtr()));
   }
 };
 

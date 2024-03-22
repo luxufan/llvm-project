@@ -1418,6 +1418,8 @@ public:
   ) : CmpInst(makeCmpResultType(LHS->getType()), Instruction::FCmp, Pred, LHS,
               RHS, NameStr, nullptr, FlagsSource) {
     AssertOK();
+    if (FlagsSource)
+      copyIRFlags(FlagsSource);
   }
 
   /// @returns true if the predicate of this instruction is EQ or NE.

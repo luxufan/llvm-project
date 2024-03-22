@@ -286,7 +286,7 @@ protected:
                  unsigned NumOperands)
       : MemoryAccess(C, Vty, DeleteValue, BB, NumOperands),
         MemoryInstruction(MI) {
-    setDefiningAccess(DMA);
+  //  setDefiningAccess(DMA);
   }
 
   // Use deleteValue() to delete a generic MemoryUseOrDef.
@@ -315,7 +315,9 @@ public:
 
   MemoryUse(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB)
       : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB,
-                       /*NumOperands=*/1) {}
+                       /*NumOperands=*/1) {
+   setDefiningAccess(DMA);
+  }
 
   // allocate space for exactly one operand
   void *operator new(size_t S) { return User::operator new(S, 1); }
@@ -383,7 +385,9 @@ public:
             unsigned Ver)
       : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB,
                        /*NumOperands=*/2),
-        ID(Ver) {}
+        ID(Ver) {
+   setDefiningAccess(DMA);
+  }
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, 2); }
