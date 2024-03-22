@@ -78,7 +78,6 @@ class Value {
   friend class ValueAsMetadata; // Allow access to IsUsedByMD.
   friend class ValueHandleBase;
 
-  const unsigned char SubclassID;   // Subclass identifier (for isa/dyn_cast)
   unsigned char HasValueHandle : 1; // Has a ValueHandle pointing to this?
 
 protected:

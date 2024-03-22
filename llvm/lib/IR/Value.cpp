@@ -51,7 +51,7 @@ static inline Type *checkType(Type *Ty) {
 }
 
 Value::Value(Type *ty, unsigned scid)
-    : VTy(checkType(ty)), UseList(nullptr), SubclassID(scid), HasValueHandle(0),
+    : VTy(checkType(ty)), UseList(nullptr), HasValueHandle(0),
       SubclassOptionalData(0), SubclassData(0), NumUserOperands(0),
       IsUsedByMD(false), HasName(false), HasMetadata(false) {
   static_assert(ConstantFirstVal == 0, "!(SubclassID < ConstantFirstVal)");
@@ -59,14 +59,14 @@ Value::Value(Type *ty, unsigned scid)
   // Note, we cannot call isa<CallInst> before the CallInst has been
   // constructed.
   unsigned OpCode = 0;
-  if (SubclassID >= InstructionVal)
-    OpCode = SubclassID - InstructionVal;
+  if (scid >= InstructionVal)
+    OpCode = scid - InstructionVal;
   if (OpCode == Instruction::Call || OpCode == Instruction::Invoke ||
       OpCode == Instruction::CallBr)
     assert((VTy->isFirstClassType() || VTy->isVoidTy() || VTy->isStructTy()) &&
            "invalid CallBase type!");
-  else if (SubclassID != BasicBlockVal &&
-           (/*SubclassID < ConstantFirstVal ||*/ SubclassID > ConstantLastVal))
+  else if (scid != BasicBlockVal &&
+           (/*SubclassID < ConstantFirstVal ||*/ scid > ConstantLastVal))
     assert((VTy->isFirstClassType() || VTy->isVoidTy()) &&
            "Cannot create non-first-class values except for constants!");
   static_assert(sizeof(Value) == 2 * sizeof(void *) + 2 * sizeof(unsigned) + 8,
