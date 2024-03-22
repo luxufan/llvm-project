@@ -275,7 +275,7 @@ private:
 
     void deleted() override {
       assert(BPI != nullptr);
-      BPI->eraseBlock(cast<BasicBlock>(getValPtr()));
+      BPI->eraseBlock(static_cast<BasicBlock *>(getValPtr()));
     }
 
   public:
